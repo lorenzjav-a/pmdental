@@ -1,0 +1,20 @@
+/* Custom color for PM Dental Clinic */
+.custom-lavender {
+    background-color: #c5aded !important;
+}
+
+/* Optional: If you want the text in the navbar to match */
+.navbar-brand {
+    color: #c5aded !important;
+    font-weight: bold;
+}
+
+/* Customizing the Appointment button border/text to match your screenshot */
+.btn-appointment-outline {
+    border: 1px solid #0d6efd;
+    color: #0d6efd;
+    background: transparent;
+    padding: 5px 15px;
+    border-radius: 5px;
+    text-decoration: none;
+}
