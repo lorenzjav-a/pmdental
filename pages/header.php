@@ -43,8 +43,6 @@
                 <li class="nav-item"><a class="nav-link" href="about.php">About</a></li>
                 <li class="nav-item"><a class="nav-link" href="services.php">Services</a></li>
                 <li class="nav-item"><a class="nav-link" href="contacts.php">Contact Us</a></li>
-                <li class="nav-item ms-lg-4">
-                    <span class="appointment-text">Appointment | 📞 09222981492</span>
                 </li>
             </ul>
         </div>

@@ -26,7 +26,7 @@
                 and is registered with all major health funds, so you may make a claim with your 
                 health insurance provider at the time of your visit.
             </p>
-            <p class="mt-4"><a href="contact.php" class="btn btn-sm btn-link p-0 text-decoration-none fw-bold">Make a reservation right now →</a></p>
+            <p class="mt-4"><a href="contacts.php" class="btn btn-sm btn-link p-0 text-decoration-none fw-bold">Make a reservation right now →</a></p>
         </div>
 
         <div class="col-md-4 text-center">

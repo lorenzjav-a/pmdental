@@ -9,9 +9,7 @@
                 <h1 class="display-1 fw-bold mb-3" style="color: #1a2a40; line-height: 0.9;">Dental Care</h1>
                 <p class="fs-4 text-muted mb-4">for All Your Needs</p>
                 
-                <a href="about.php" class="btn btn-light rounded-pill px-4 shadow-sm border py-2" style="background-color: #e9ecef; color: #6c757d;">
-                    ↓ About Us
-                </a>
+              <a href="about.php" class="btn rounded-pill px-4 shadow-sm py-2" style="background-color: #c5aded; color: white; border: none;"> ↓ About Us </a>
             </div>
 
             <div class="col-lg-7 mt-5 mt-lg-0 position-relative">
