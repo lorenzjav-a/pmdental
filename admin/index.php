@@ -7,7 +7,7 @@ $first_nameErr = $last_nameErr = $emailErr = $account_typeErr = "";
 $registerStatus = null;
 $registerMessage = ' ';
 
-function password($length = 5)
+function password($length = 8)
 {
     $chars = "abcdefghijklmnopqrstuvwxyz1234567890";
     return substr(str_shuffle($chars), 0, $length);
@@ -51,11 +51,12 @@ if (isset($_POST["btnRegister"])) {
             $emailErr = "Invalid email format";
         } else {
 
-            $password = password(5);
+            $password = password(8);
 
             try {
+                // FIX: Stripped parameter overloads so methods strictly match your class definitions
                 if ($account_type == "1") {
-                    $con->insertEmployee($first_name, $last_name, $email, $password, $account_type);
+                    $con->insertEmployee($first_name, $last_name, $email, $password);
                 } else {
                     $con->insertDentist($first_name, $last_name, $email, $password, $account_type);
                 }
@@ -108,15 +109,13 @@ if (isset($_POST["btnRegister"])) {
     <div class="container">
         <div class="row justify-content-center">
             <div class="col-12 col-md-8 col-lg-6">
-
                 <div class="card register-card shadow p-4 mx-auto">
                     <div class="text-center mb-4">
                         <h3 class="fw-bold text-primary">PM Dental Clinic</h3>
-                        <p class="text-muted small">Account Registration </p>
+                        <p class="text-muted small">Account Registration</p>
                     </div>
 
                     <form action="" method="POST">
-
                         <div class="row g-2 mb-3">
                             <div class="col-md-6">
                                 <label for="first_name" class="form-label small fw-medium">First Name</label>
@@ -149,16 +148,12 @@ if (isset($_POST["btnRegister"])) {
                         <div class="d-grid gap-2">
                             <button type="submit" name="btnRegister" class="btn btn-primary py-2 fw-semibold">Submit</button>
                         </div>
-
                         <hr class="text-muted my-4">
-
                         <div class="text-center">
                             <p class="small text-muted mb-0">Already registered? <a href="login.php" class="text-decoration-none">Sign in to workspace</a></p>
                         </div>
-
                     </form>
                 </div>
-
             </div>
         </div>
     </div>
@@ -186,7 +181,6 @@ if (isset($_POST["btnRegister"])) {
             });
         }
     </script>
-
 </body>
 
 </html>
