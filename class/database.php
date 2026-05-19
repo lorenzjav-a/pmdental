@@ -23,14 +23,16 @@ class database
             $stmt1->execute([$first_name, $last_name, $email]);
             $employee_id = $con->lastInsertId();
 
-            
+
             $stmt2 = $con->prepare('INSERT INTO user_accounts (email, passwords, account_type, employee_id) VALUES (?, ?, ?, ?)');
             $stmt2->execute([$email, $passwords, $account_type, $employee_id]);
 
             $con->commit();
             return $employee_id;
         } catch (PDOException $e) {
-            if ($con->inTransaction()) { $con->rollBack(); }
+            if ($con->inTransaction()) {
+                $con->rollBack();
+            }
             throw $e;
         }
     }
@@ -45,14 +47,16 @@ class database
             $stmt1->execute([$first_name, $last_name, $email]);
             $dentist_id = $con->lastInsertId();
 
-            
+
             $stmt2 = $con->prepare('INSERT INTO user_accounts (email, passwords, account_type, dentist_id) VALUES (?, ?, ?, ?)');
             $stmt2->execute([$email, $passwords, $account_type, $dentist_id]);
 
             $con->commit();
             return $dentist_id;
         } catch (PDOException $e) {
-            if ($con->inTransaction()) { $con->rollBack(); }
+            if ($con->inTransaction()) {
+                $con->rollBack();
+            }
             throw $e;
         }
     }
@@ -70,7 +74,7 @@ class database
             $stmt->execute([$email]);
             $user = $stmt->fetch();
 
-            
+
             if ($user && $passwords == $user['passwords']) {
                 return [
                     'id'           => $user['Employee_ID'] ?? $user['Dentist_ID'],
@@ -179,28 +183,6 @@ class database
     }
 
 
-    function assignDentistToAppointment($appointment_id, $employee_id, $dentist_id)
-    {
-        $con = $this->opencon();
-        try {
-            $con->beginTransaction();
-
-            $query = "UPDATE appointment 
-                  SET Employee_ID = ?, Dentist_ID = ?, Appointment_Status = 'Confirmed' 
-                  WHERE Appointment_ID = ?";
-            $stmt = $con->prepare($query);
-            $stmt->execute([$employee_id, $dentist_id, $appointment_id]);
-
-            $con->commit();
-            return true;
-        } catch (PDOException $e) {
-            if ($con->inTransaction()) {
-                $con->rollBack();
-            }
-            throw $e;
-        }
-    }
-
     function viewPatients()
     {
         $con = $this->opencon();
@@ -236,4 +218,59 @@ class database
             throw new Exception("Failed to record medical history parameters: " . $e->getMessage());
         }
     }
+
+    function checkScheduleConflict($dentist_id, $appointment_id)
+    {
+        $con = $this->opencon();
+        $stmt = $con->prepare("SELECT Appointment_Date FROM appointment WHERE Appointment_ID = ?");
+        $stmt->execute([$appointment_id]);
+        $target = $stmt->fetch();
+        if (!$target) return false;
+        $stmt2 = $con->prepare("
+        SELECT a.Appointment_ID, a.Appointment_Date, p.Patient_FN, p.Patient_LN
+        FROM appointment a
+        LEFT JOIN patient p ON a.Patient_ID = p.Patient_ID
+        WHERE a.Dentist_ID = ?
+          AND a.Appointment_ID != ?
+          AND a.Appointment_Status IN ('Pending','Confirmed')
+          AND ABS(TIMESTAMPDIFF(MINUTE, a.Appointment_Date, ?)) < 60
+    ");
+        $stmt2->execute([$dentist_id, $appointment_id, $target['Appointment_Date']]);
+        return $stmt2->fetch() ?: false;
+    }
+    
+    function assignDentistToAppointment($appointment_id, $employee_id, $dentist_id)
+    {
+        $conflict = $this->checkScheduleConflict($dentist_id, $appointment_id);
+        if ($conflict) {
+            $time = date('M d, Y h:i A', strtotime($conflict['Appointment_Date']));
+            $name = $conflict['Patient_FN'] . ' ' . $conflict['Patient_LN'];
+            throw new Exception("Conflict! This dentist already has an appointment with $name at $time.");
+        }
+        $con = $this->opencon();
+        $stmt = $con->prepare("
+        UPDATE appointment SET Employee_ID=?, Dentist_ID=?, Appointment_Status='Confirmed'
+        WHERE Appointment_ID=?
+    ");
+        $stmt->execute([$employee_id, $dentist_id, $appointment_id]);
+        return true;
+    }
+    function getDentistAppointments($dentist_id)
+    {
+        $con = $this->opencon();
+        $stmt = $con->prepare("
+        SELECT a.Appointment_ID, a.Appointment_Date, a.Appointment_Status,
+               p.Patient_FN, p.Patient_LN, s.Service_Name
+        FROM appointment a
+        LEFT JOIN patient p ON a.Patient_ID = p.Patient_ID
+        LEFT JOIN appointment_service asv ON a.Appointment_ID = asv.Appointment_ID
+        LEFT JOIN service s ON asv.Service_ID = s.Service_ID
+        WHERE a.Dentist_ID = ?
+          AND a.Appointment_Status IN ('Pending','Confirmed')
+        ORDER BY a.Appointment_Date ASC
+    ");
+        $stmt->execute([$dentist_id]);
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    }
+
 }

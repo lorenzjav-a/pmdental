@@ -1,16 +1,31 @@
 <?php
 session_start();
+require_once('../class/database.php');
+$con = new database();
 
-// FIX: Updated identity gate validation to properly allow logged-in clinic staff profiles
 if (!isset($_SESSION['user_id']) || $_SESSION['account_type'] != 1) {
   header("Location: login.php");
   exit();
 }
 
-require_once('../class/database.php');
-$con = new database();
 
-// FIX: Tied target execution context variables dynamically to active session values
+if (isset($_GET['fetch_dentist_calendar'], $_GET['dentist_id'])) {
+  header('Content-Type: application/json');
+  $appts = $con->getDentistAppointments((int)$_GET['dentist_id']);
+  $events = [];
+  foreach ($appts as $a) {
+    $events[] = [
+      'title' => $a['Patient_FN'] . ' ' . $a['Patient_LN'],
+      'start' => $a['Appointment_Date'],
+      'color' => $a['Appointment_Status'] === 'Confirmed' ? '#198754' : '#ffc107',
+    ];
+  }
+  echo json_encode($events);
+  exit();
+}
+
+
+
 $current_employee_id = $_SESSION['user_id'];
 
 $allAppointments = $con->viewAppointments();
@@ -62,6 +77,9 @@ if (isset($_POST['save_med_history'])) {
   <title>Employee Dashboard - PM Dental Clinic</title>
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" />
   <link rel="stylesheet" href="../sweetalert/dist/sweetalert2.css">
+  <link href="[cdn.jsdelivr.net](https://cdn.jsdelivr.net/npm/fullcalendar@6.1.11/index.global.min.css)" rel="stylesheet">
+  <script src="[cdn.jsdelivr.net](https://cdn.jsdelivr.net/npm/fullcalendar@6.1.11/index.global.min.js)"></script>
+
 </head>
 
 <body class="bg-light">
@@ -143,6 +161,31 @@ if (isset($_POST['save_med_history'])) {
           </div>
         </div>
       </div>
+
+      <!-- Dentist Calendar -->
+      <div class="col-12">
+        <div class="card p-4 shadow-sm border-0 bg-white">
+          <h4 class="fw-bold mb-1">Dentist Schedule Calendar</h4>
+          <p class="text-muted small mb-3">Select a dentist to view their schedule</p>
+
+          <select id="dentistPicker" class="form-select w-auto mb-3">
+            <option value="" disabled selected>— Select a dentist —</option>
+            <?php foreach ($allDentists as $doc): ?>
+              <option value="<?= $doc['Dentist_ID'] ?>">
+                Dr. <?= htmlspecialchars($doc['Dentist_FN'] . ' ' . $doc['Dentist_LN']) ?>
+              </option>
+            <?php endforeach; ?>
+          </select>
+
+          <div class="d-flex gap-3 mb-2 small">
+            <span><span class="badge bg-success">&nbsp;</span> Confirmed</span>
+            <span><span class="badge bg-warning text-dark">&nbsp;</span> Pending</span>
+          </div>
+
+          <div id="dentistCalendar"></div>
+        </div>
+      </div>
+
 
       <div class="col-12">
         <div class="card p-4 shadow-sm border-0 bg-white">
@@ -318,6 +361,27 @@ if (isset($_POST['save_med_history'])) {
       });
     }
   </script>
+
+  <script src="[cdn.jsdelivr.net](https://cdn.jsdelivr.net/npm/fullcalendar@6.1.11/index.global.min.js)"></script>
+  <script>
+    // Calendar
+    const cal = new FullCalendar.Calendar(document.getElementById('dentistCalendar'), {
+      initialView: 'dayGridMonth',
+      height: 500,
+      events: []
+    });
+    cal.render();
+
+    document.getElementById('dentistPicker').addEventListener('change', function() {
+      fetch('employee-dashboard.php?fetch_dentist_calendar=1&dentist_id=' + this.value)
+        .then(r => r.json())
+        .then(events => {
+          cal.removeAllEvents();
+          cal.addEventSource(events);
+        });
+    });
+  </script>
+
 </body>
 
 </html>
