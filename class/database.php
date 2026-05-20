@@ -226,8 +226,7 @@ class database
         $stmt->execute([$appointment_id]);
         $target = $stmt->fetch();
         if (!$target) return false;
-        $stmt2 = $con->prepare("
-        SELECT a.Appointment_ID, a.Appointment_Date, p.Patient_FN, p.Patient_LN
+        $stmt2 = $con->prepare("SELECT a.Appointment_ID, a.Appointment_Date, p.Patient_FN, p.Patient_LN
         FROM appointment a
         LEFT JOIN patient p ON a.Patient_ID = p.Patient_ID
         WHERE a.Dentist_ID = ?
@@ -258,8 +257,7 @@ class database
     function getDentistAppointments($dentist_id)
     {
         $con = $this->opencon();
-        $stmt = $con->prepare("
-        SELECT a.Appointment_ID, a.Appointment_Date, a.Appointment_Status,
+        $stmt = $con->prepare("SELECT a.Appointment_ID, a.Appointment_Date, a.Appointment_Status,
                p.Patient_FN, p.Patient_LN, s.Service_Name
         FROM appointment a
         LEFT JOIN patient p ON a.Patient_ID = p.Patient_ID

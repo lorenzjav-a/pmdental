@@ -1,17 +1,11 @@
 <?php
 require_once('../class/database.php');
 $con = new database();
-$first_name = $last_name = $email = $account_type = "";
-$first_nameErr = $last_nameErr = $emailErr = $account_typeErr = "";
+$first_name = $last_name = $email = $account_type = $password = $confirm_password = "";
+$first_nameErr = $last_nameErr = $emailErr = $account_typeErr = $passwordErr = $confirm_passwordErr = "";
 
 $registerStatus = null;
 $registerMessage = ' ';
-
-function password($length = 8)
-{
-    $chars = "abcdefghijklmnopqrstuvwxyz1234567890";
-    return substr(str_shuffle($chars), 0, $length);
-}
 
 if (isset($_POST["btnRegister"])) {
 
@@ -39,7 +33,20 @@ if (isset($_POST["btnRegister"])) {
         $account_type = $_POST["account_type"];
     }
 
-    if (empty($first_nameErr) && empty($last_nameErr) && empty($emailErr) && empty($account_typeErr)) {
+    if (empty($_POST["password"])) {
+        $passwordErr = "Required!";
+    } else {
+        $password = $_POST["password"];
+    }
+
+    if (empty($_POST["confirm_password"])) {
+        $confirm_passwordErr = "Required!";
+    } else {
+        $confirm_password = $_POST["confirm_password"];
+    }
+
+    // Proceed if all fields are filled
+    if (empty($first_nameErr) && empty($last_nameErr) && empty($emailErr) && empty($account_typeErr) && empty($passwordErr) && empty($confirm_passwordErr)) {
 
         if (!preg_match("/^[a-zA-Z ]*$/", $first_name)) {
             $first_nameErr = "Invalid format";
@@ -49,12 +56,13 @@ if (isset($_POST["btnRegister"])) {
             $last_nameErr = "Too short";
         } elseif (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
             $emailErr = "Invalid email format";
+        } elseif (strlen($password) < 6) {
+            $passwordErr = "Password must be at least 6 characters";
+        } elseif ($password !== $confirm_password) {
+            $confirm_passwordErr = "Passwords do not match!";
         } else {
-
-            $password = password(8);
-
+            // If everything is valid and passwords match, register the user
             try {
-                // FIX: Stripped parameter overloads so methods strictly match your class definitions
                 if ($account_type == "1") {
                     $con->insertEmployee($first_name, $last_name, $email, $password);
                 } else {
@@ -62,9 +70,10 @@ if (isset($_POST["btnRegister"])) {
                 }
 
                 $registerStatus = 'success';
-                $registerMessage = 'Registration successful! Temporary Password: ' . $password;
+                $registerMessage = 'Registration successful! You can now log in.';
 
-                $first_name = $last_name = $email = $account_type = "";
+                // Clear the form fields after successful registration
+                $first_name = $last_name = $email = $account_type = $password = $confirm_password = "";
             } catch (Exception $e) {
                 $registerStatus = 'error';
                 if (str_contains($e->getMessage(), 'Duplicate entry')) {
@@ -105,7 +114,6 @@ if (isset($_POST["btnRegister"])) {
 </head>
 
 <body class="d-flex align-items-center min-vh-100">
-
     <div class="container">
         <div class="row justify-content-center">
             <div class="col-12 col-md-8 col-lg-6">
@@ -135,6 +143,19 @@ if (isset($_POST["btnRegister"])) {
                             <div class="text-danger small mt-1"><?= $emailErr; ?></div>
                         </div>
 
+                        <div class="row g-2 mb-3">
+                            <div class="col-md-6">
+                                <label for="password" class="form-label small fw-medium">Password</label>
+                                <input type="password" class="form-control" id="password" name="password">
+                                <div class="text-danger small mt-1"><?= $passwordErr; ?></div>
+                            </div>
+                            <div class="col-md-6">
+                                <label for="confirm_password" class="form-label small fw-medium">Confirm Password</label>
+                                <input type="password" class="form-control" id="confirm_password" name="confirm_password">
+                                <div class="text-danger small mt-1"><?= $confirm_passwordErr; ?></div>
+                            </div>
+                        </div>
+
                         <div class="mb-4">
                             <label for="account_type" class="form-label small fw-medium">Registering Role Assignment</label>
                             <select class="form-select" id="account_type" name="account_type">
@@ -160,7 +181,6 @@ if (isset($_POST["btnRegister"])) {
 
     <script src="../bootstrap/js/bootstrap.bundle.min.js"></script>
     <script src="../sweetalert/dist/sweetalert2.js"></script>
-
     <script>
         const status = <?php echo json_encode($registerStatus) ?>;
         const msg = <?php echo json_encode($registerMessage) ?>;
@@ -181,6 +201,7 @@ if (isset($_POST["btnRegister"])) {
             });
         }
     </script>
+    
 </body>
 
 </html>
