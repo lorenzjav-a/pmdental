@@ -154,11 +154,14 @@ class database
                     p.Patient_FN, 
                     p.Patient_LN, 
                     p.Patient_PhoneNo,
-                    s.Service_Name
+                    s.Service_Name,
+                    d.Dentist_FN,
+                    d.Dentist_LN
                   FROM appointment a
                   LEFT JOIN patient p ON a.Patient_ID = p.Patient_ID
                   LEFT JOIN appointment_service asv ON a.Appointment_ID = asv.Appointment_ID
                   LEFT JOIN service s ON asv.Service_ID = s.Service_ID
+                  LEFT JOIN dentist d ON a.Dentist_ID = d.Dentist_ID
                   ORDER BY a.Appointment_Date DESC";
 
             $stmt = $con->prepare($query);
@@ -174,7 +177,7 @@ class database
     {
         $con = $this->opencon();
         try {
-            $stmt = $con->prepare("SELECT Dentist_ID, Dentist_FN, Dentist_LN FROM dentist ORDER BY Dentist_LN ASC");
+            $stmt = $con->prepare("SELECT Dentist_ID, Dentist_FN, Dentist_LN, email FROM dentist ORDER BY Dentist_LN ASC");
             $stmt->execute();
             return $stmt->fetchAll(PDO::FETCH_ASSOC);
         } catch (PDOException $e) {
@@ -182,6 +185,17 @@ class database
         }
     }
 
+    function getDentistCalendarEvents()
+    {
+        $con = $this->opencon();
+        try {
+            $stmt = $con->prepare('SELECT Den_Calendar_ID, Dentist_ID, Schedule_Date, Start_Time, End_Time FROM dentist_calendar');
+            $stmt->execute();
+            return $stmt->fetchAll(PDO::FETCH_ASSOC);
+        } catch (PDOException $e) {
+            return [];
+        }
+    }
 
     function viewPatients()
     {
@@ -202,7 +216,67 @@ class database
             $stmt->execute();
             return $stmt->fetchAll(PDO::FETCH_ASSOC);
         } catch (PDOException $e) {
-            return true;
+            return [];
+        }
+    }
+
+    function viewUsers()
+    {
+        $con = $this->opencon();
+        try {
+            $stmt = $con->prepare("SELECT ua.email, ua.account_type, e.Employee_FN, e.Employee_LN, d.Dentist_FN, d.Dentist_LN
+                FROM user_accounts ua
+                LEFT JOIN employee e ON ua.employee_id = e.Employee_ID
+                LEFT JOIN dentist d ON ua.dentist_id = d.Dentist_ID
+                ORDER BY ua.email ASC");
+            $stmt->execute();
+            return $stmt->fetchAll(PDO::FETCH_ASSOC);
+        } catch (PDOException $e) {
+            return [];
+        }
+    }
+
+    function countUsers()
+    {
+        $con = $this->opencon();
+        try {
+            $stmt = $con->prepare("SELECT COUNT(*) AS total FROM user_accounts");
+            $stmt->execute();
+            $row = $stmt->fetch(PDO::FETCH_ASSOC);
+            return $row ? (int) $row['total'] : 0;
+        } catch (PDOException $e) {
+            return 0;
+        }
+    }
+
+    function countDentists()
+    {
+        $con = $this->opencon();
+        try {
+            $stmt = $con->prepare("SELECT COUNT(*) AS total FROM dentist");
+            $stmt->execute();
+            $row = $stmt->fetch(PDO::FETCH_ASSOC);
+            return $row ? (int) $row['total'] : 0;
+        } catch (PDOException $e) {
+            return 0;
+        }
+    }
+
+    function countAppointments($status = null)
+    {
+        $con = $this->opencon();
+        try {
+            if ($status !== null) {
+                $stmt = $con->prepare("SELECT COUNT(*) AS total FROM appointment WHERE Appointment_Status = ?");
+                $stmt->execute([$status]);
+            } else {
+                $stmt = $con->prepare("SELECT COUNT(*) AS total FROM appointment");
+                $stmt->execute();
+            }
+            $row = $stmt->fetch(PDO::FETCH_ASSOC);
+            return $row ? (int) $row['total'] : 0;
+        } catch (PDOException $e) {
+            return 0;
         }
     }
 
@@ -247,8 +321,7 @@ class database
             throw new Exception("Conflict! This dentist already has an appointment with $name at $time.");
         }
         $con = $this->opencon();
-        $stmt = $con->prepare("
-        UPDATE appointment SET Employee_ID=?, Dentist_ID=?, Appointment_Status='Confirmed'
+        $stmt = $con->prepare("UPDATE appointment SET Employee_ID=?, Dentist_ID=?, Appointment_Status='Confirmed'
         WHERE Appointment_ID=?
     ");
         $stmt->execute([$employee_id, $dentist_id, $appointment_id]);

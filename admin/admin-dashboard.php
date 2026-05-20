@@ -47,6 +47,12 @@ if (!isset($_SESSION['admin_id'])) {
 }
 
 $admin_name = $_SESSION['admin_name'] ?? 'Administrator';
+$activePage = 'dashboard';
+$allAppointments = $db->viewAppointments();
+$totalUsers = $db->countUsers();
+$totalDentists = $db->countDentists();
+$totalAppointments = $db->countAppointments();
+$pendingRequests = $db->countAppointments('Pending');
 ?>
 
 <!DOCTYPE html>
@@ -100,7 +106,8 @@ $admin_name = $_SESSION['admin_name'] ?? 'Administrator';
             transition: 0.3s;
         }
 
-        .sidebar a:hover {
+        .sidebar a:hover,
+        .sidebar a.active {
             background: #1b263b;
             color: white;
             padding-left: 30px;
@@ -201,36 +208,7 @@ $admin_name = $_SESSION['admin_name'] ?? 'Administrator';
 
     <!-- SIDEBAR -->
 
-    <div class="sidebar">
-
-        <h2>PM Dental</h2>
-
-        <a href="#">
-            <i class="fas fa-chart-line"></i>
-            Dashboard
-        </a>
-
-        <a href="#">
-            <i class="fas fa-users"></i>
-            Users
-        </a>
-
-        <a href="#">
-            <i class="fas fa-user-doctor"></i>
-            Dentists
-        </a>
-
-        <a href="#">
-            <i class="fas fa-calendar-check"></i>
-            Appointments
-        </a>
-
-        <a href="#">
-            <i class="fas fa-file"></i>
-            Reports
-        </a>
-
-    </div>
+    <?php include 'admin-sidebar.php'; ?>
 
     <!-- MAIN -->
 
@@ -269,7 +247,7 @@ $admin_name = $_SESSION['admin_name'] ?? 'Administrator';
 
                 <h3>Total Users</h3>
 
-                <h1>120</h1>
+                <h1><?= number_format($totalUsers); ?></h1>
 
             </div>
 
@@ -281,7 +259,7 @@ $admin_name = $_SESSION['admin_name'] ?? 'Administrator';
 
                 <h3>Appointments</h3>
 
-                <h1>45</h1>
+                <h1><?= number_format($totalAppointments); ?></h1>
 
             </div>
 
@@ -293,7 +271,7 @@ $admin_name = $_SESSION['admin_name'] ?? 'Administrator';
 
                 <h3>Pending Requests</h3>
 
-                <h1>8</h1>
+                <h1><?= number_format($pendingRequests); ?></h1>
 
             </div>
 
@@ -305,7 +283,7 @@ $admin_name = $_SESSION['admin_name'] ?? 'Administrator';
 
                 <h3>Dentists</h3>
 
-                <h1>12</h1>
+                <h1><?= number_format($totalDentists); ?></h1>
 
             </div>
 
@@ -333,40 +311,35 @@ $admin_name = $_SESSION['admin_name'] ?? 'Administrator';
                 </thead>
 
                 <tbody>
-
-                    <tr>
-                        <td>Juan Dela Cruz</td>
-                        <td>Dr. Kyle</td>
-                        <td>July 20, 2025</td>
-                        <td>
-                            <span class="badge bg-success">
-                                Approved
-                            </span>
-                        </td>
-                    </tr>
-
-                    <tr>
-                        <td>Maria Santos</td>
-                        <td>Dr. Clarence</td>
-                        <td>July 21, 2025</td>
-                        <td>
-                            <span class="badge bg-warning text-dark">
-                                Pending
-                            </span>
-                        </td>
-                    </tr>
-
-                    <tr>
-                        <td>James Reid</td>
-                        <td>Dr. Kimi</td>
-                        <td>July 22, 2025</td>
-                        <td>
-                            <span class="badge bg-danger">
-                                Cancelled
-                            </span>
-                        </td>
-                    </tr>
-
+                    <?php if (empty($allAppointments) || !is_array($allAppointments)): ?>
+                        <tr>
+                            <td colspan="4" class="text-center text-muted py-4">No recent appointments found.</td>
+                        </tr>
+                    <?php else: ?>
+                        <?php foreach (array_slice($allAppointments, 0, 5) as $app): ?>
+                            <tr>
+                                <td><?= htmlspecialchars(($app['Patient_FN'] ?? '') . ' ' . ($app['Patient_LN'] ?? '')); ?></td>
+                                <td><?= htmlspecialchars((!empty($app['Dentist_FN']) || !empty($app['Dentist_LN'])) ? trim(($app['Dentist_FN'] ?? '') . ' ' . ($app['Dentist_LN'] ?? '')) : 'Not assigned'); ?></td>
+                                <td><?= !empty($app['Appointment_Date']) ? date('M d, Y', strtotime($app['Appointment_Date'])) : '-'; ?></td>
+                                <td>
+                                    <?php
+                                    $status = $app['Appointment_Status'] ?? 'Unknown';
+                                    $badge = 'bg-secondary';
+                                    if ($status === 'Confirmed') {
+                                        $badge = 'bg-success';
+                                    } elseif ($status === 'Pending') {
+                                        $badge = 'bg-warning text-dark';
+                                    } elseif ($status === 'Cancelled') {
+                                        $badge = 'bg-danger';
+                                    }
+                                    ?>
+                                    <span class="badge <?= $badge; ?>">
+                                        <?= htmlspecialchars($status); ?>
+                                    </span>
+                                </td>
+                            </tr>
+                        <?php endforeach; ?>
+                    <?php endif; ?>
                 </tbody>
 
             </table>
@@ -375,7 +348,7 @@ $admin_name = $_SESSION['admin_name'] ?? 'Administrator';
 
     </div>
 
-    
+
 
 </body>
 

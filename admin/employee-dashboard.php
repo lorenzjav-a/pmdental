@@ -103,6 +103,8 @@ if (isset($_POST['save_med_history'])) {
   </nav>
 
   <main class="container py-4">
+
+<!-- Dewntist Calendar -->
     <div class="row g-4">
       <div class="col-12">
         <div class="card p-4 shadow-sm border-0 bg-white">
@@ -162,29 +164,9 @@ if (isset($_POST['save_med_history'])) {
         </div>
       </div>
 
-      <!-- Dentist Calendar -->
-      <div class="col-12">
-        <div class="card p-4 shadow-sm border-0 bg-white">
-          <h4 class="fw-bold mb-1">Dentist Schedule Calendar</h4>
-          <p class="text-muted small mb-3">Select a dentist to view their schedule</p>
+      
+      
 
-          <select id="dentistPicker" class="form-select w-auto mb-3">
-            <option value="" disabled selected>— Select a dentist —</option>
-            <?php foreach ($allDentists as $doc): ?>
-              <option value="<?= $doc['Dentist_ID'] ?>">
-                Dr. <?= htmlspecialchars($doc['Dentist_FN'] . ' ' . $doc['Dentist_LN']) ?>
-              </option>
-            <?php endforeach; ?>
-          </select>
-
-          <div class="d-flex gap-3 mb-2 small">
-            <span><span class="badge bg-success">&nbsp;</span> Confirmed</span>
-            <span><span class="badge bg-warning text-dark">&nbsp;</span> Pending</span>
-          </div>
-
-          <div id="dentistCalendar"></div>
-        </div>
-      </div>
 
 
       <div class="col-12">
