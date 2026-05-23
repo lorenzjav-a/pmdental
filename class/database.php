@@ -5,7 +5,7 @@ class database
     function opencon(): PDO
     {
         return new PDO(
-            'mysql:host=localhost; dbname=pmdentaltry',
+            'mysql:host=localhost; dbname=dentist',
             username: 'root',
             password: ''
         );
@@ -143,35 +143,37 @@ class database
         }
     }
 
-    function viewAppointments()
-    {
-        $con = $this->opencon();
-        try {
-            $query = "SELECT 
+    function viewAppointments() {
+    $con = $this->opencon();
+    try {
+        // Updated to include the service bridge table and service masterlist table
+        $query = "SELECT 
                     a.Appointment_ID, 
                     a.Appointment_Date, 
                     a.Appointment_Status, 
+                    p.Patient_ID,
                     p.Patient_FN, 
-                    p.Patient_LN, 
+                    p.Patient_LN,
+                    p.Patient_BirthDate,
+                    p.Patient_Gender,
                     p.Patient_PhoneNo,
-                    s.Service_Name,
-                    d.Dentist_FN,
-                    d.Dentist_LN
+                    d.Dentist_FN, 
+                    d.Dentist_LN,
+                    s.Service_Name
                   FROM appointment a
                   LEFT JOIN patient p ON a.Patient_ID = p.Patient_ID
+                  LEFT JOIN dentist d ON a.Dentist_ID = d.Dentist_ID
                   LEFT JOIN appointment_service asv ON a.Appointment_ID = asv.Appointment_ID
                   LEFT JOIN service s ON asv.Service_ID = s.Service_ID
-                  LEFT JOIN dentist d ON a.Dentist_ID = d.Dentist_ID
                   ORDER BY a.Appointment_Date DESC";
-
-            $stmt = $con->prepare($query);
-            $stmt->execute();
-            return $stmt->fetchAll(PDO::FETCH_ASSOC);
-        } catch (PDOException $e) {
-            return true;
-        }
+        
+        $stmt = $con->prepare($query);
+        $stmt->execute();
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    } catch (PDOException $e) {
+        return [];
     }
-
+}
 
     function viewDentists()
     {
@@ -343,5 +345,174 @@ class database
         $stmt->execute([$dentist_id]);
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
+function getPatientPrescriptions($patient_id)
+    {
+        $con = $this->opencon();
+        try {
+            $query = "SELECT 
+                        pi.Item_Name, 
+                        pi.Item_Quantity, 
+                        pi.Pres_Dosage,
+                        a.Appointment_Date,
+                        d.Dentist_FN,
+                        d.Dentist_LN
+                      FROM prescription_items pi
+                      INNER JOIN prescription pr ON pi.Prescription_ID = pr.Prescription_ID
+                      INNER JOIN appointment a ON pr.Appointment_ID = a.Appointment_ID
+                      LEFT JOIN dentist d ON a.Dentist_ID = d.Dentist_ID
+                      WHERE a.Patient_ID = ?
+                      ORDER BY a.Appointment_Date DESC";
 
+            $stmt = $con->prepare($query);
+            $stmt->execute([$patient_id]);
+            return $stmt->fetchAll(PDO::FETCH_ASSOC);
+        } catch (PDOException $e) {
+            return [];
+        }
+    }
+
+    /**
+     * Updates an existing billing statement or handles checking out/logging payments 
+     * inside the payment terminal system
+     */
+    function updatePaymentStatus($appointment_id, $payment_method, $payment_status)
+    {
+        $con = $this->opencon();
+        try {
+            // First, check if a payment tracker already exists for this appointment
+            $stmt_check = $con->prepare("SELECT Payment_ID FROM payment WHERE Appointment_ID = ? LIMIT 1");
+            $stmt_check->execute([$appointment_id]);
+            $exists = $stmt_check->fetch(PDO::FETCH_ASSOC);
+
+            if ($exists) {
+                // Update the current invoice trace parameters
+                $query = "UPDATE payment 
+                          SET Payment_Method = ?, Payment_Status = ?, Payment_Date = CURDATE() 
+                          WHERE Appointment_ID = ?";
+                $stmt = $con->prepare($query);
+                return $stmt->execute([$payment_method, $payment_status, $appointment_id]);
+            } else {
+                // If it doesn't exist, calculate the fee baseline via service_cost or service table
+                $stmt_fee = $con->prepare("SELECT s.Service_Fee 
+                                           FROM appointment_service asv 
+                                           INNER JOIN service s ON asv.Service_ID = s.Service_ID 
+                                           WHERE asv.Appointment_ID = ? LIMIT 1");
+                $stmt_fee->execute([$appointment_id]);
+                $service = $stmt_fee->fetch(PDO::FETCH_ASSOC);
+                $amount = $service ? $service['Service_Fee'] : 0.00;
+
+                // Insert a clean transaction row tracking parameters natively
+                $query = "INSERT INTO payment (Appointment_ID, Payment_Amount, Payment_Method, Payment_Status, Payment_Date) 
+                          VALUES (?, ?, ?, ?, CURDATE())";
+                $stmt = $con->prepare($query);
+                return $stmt->execute([$appointment_id, $amount, $payment_method, $payment_status]);
+            }
+        } catch (PDOException $e) {
+            throw new Exception("Failed to execute terminal payment checkout: " . $e->getMessage());
+        }
+    }
+    public function updateDentistConsultationFee($service_id, $new_fee)
+    {
+        $con = $this->opencon();
+        try {
+            $stmt = $con->prepare("UPDATE service SET Service_Fee = ? WHERE Service_ID = ?");
+            return $stmt->execute([$new_fee, $service_id]);
+        } catch (PDOException $e) {
+            throw new Exception("Failed to update clinical consultation fee parameters: " . $e->getMessage());
+        }
+    }
+
+   
+  function getPatientWithMedicalHistory($patient_id) {
+        $con = $this->opencon();
+        try {
+            // Fetch patient core info
+            $stmt1 = $con->prepare("SELECT Patient_ID, Patient_FN, Patient_LN, Patient_BirthDate, Patient_Gender, Patient_PhoneNo FROM patient WHERE Patient_ID = ?");
+            $stmt1->execute([$patient_id]);
+            $patient = $stmt1->fetch(PDO::FETCH_ASSOC);
+
+            if (!$patient) return false;
+
+            // Fetch history records compiled by staff employees
+            $stmt2 = $con->prepare("SELECT Med_History_Name, Med_History_Desc FROM medical_history WHERE Patient_ID = ? ORDER BY Med_History_ID DESC");
+            $stmt2->execute([$patient_id]);
+            $patient['medical_history'] = $stmt2->fetchAll(PDO::FETCH_ASSOC);
+
+            return $patient;
+        } catch (PDOException $e) {
+            return false;
+        }
+    }
+
+    /**
+     * EMPLOYEE SIDE USE: Fetches prescription items logged by the Dentist
+     */
+    function getPrescriptionItemsByAppointment($appointment_id) {
+        $con = $this->opencon();
+        try {
+            // Joins prescription items back to prescription using your table maps
+            $stmt = $con->prepare("SELECT pi.Item_Name, pi.Item_Quantity, pi.Pres_Dosage 
+                                   FROM prescription_items pi
+                                   JOIN prescription p ON pi.Prescription_ID = p.Prescription_ID
+                                   WHERE p.Appointment_ID = ?");
+            $stmt->execute([$appointment_id]);
+            return $stmt->fetchAll(PDO::FETCH_ASSOC);
+        } catch (PDOException $e) {
+            return [];
+        }
+    }
+    function getPrescriptionItemsByPatient($patient_id) {
+    $con = $this->opencon();
+    try {
+        $query = "SELECT pi.Item_Name, pi.Item_Quantity, pi.Pres_Dosage 
+                  FROM prescription_items pi
+                  JOIN prescription pr ON pi.Prescription_ID = pr.Prescription_ID
+                  JOIN appointment a ON pr.Appointment_ID = a.Appointment_ID
+                  WHERE a.Patient_ID = :patient_id";
+        
+        $stmt = $con->prepare($query);
+        $stmt->bindParam(':patient_id', $patient_id, PDO::PARAM_INT);
+        $stmt->execute();
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    } catch (PDOException $e) {
+        return [];
+    }
+}
+
+    /**
+     * NEW METHOD: Adds a prescription record and loops through items using transactional queries.
+     * Expects $items to be an array of arrays, e.g., [['name' => 'Amoxicillin', 'qty' => 10, 'dosage' => '500mg']]
+     */
+    function addPrescriptionWithItems($appointment_id, $items)
+    {
+        $con = $this->opencon();
+        try {
+            $con->beginTransaction();
+
+            // 1. Insert parent prescription record
+            $stmt_pres = $con->prepare("INSERT INTO prescription (Appointment_ID) VALUES (?)");
+            $stmt_pres->execute([$appointment_id]);
+            $prescription_id = $con->lastInsertId();
+
+            // 2. Insert individual items matching your structural schema rules
+            $stmt_item = $con->prepare("INSERT INTO prescription_items (Prescription_ID, Item_Name, Item_Quantity, Pres_Dosage) VALUES (?, ?, ?, ?)");
+            
+            foreach ($items as $item) {
+                $stmt_item->execute([
+                    $prescription_id,
+                    $item['name'],
+                    $item['qty'],
+                    $item['dosage']
+                ]);
+            }
+
+            $con->commit();
+            return $prescription_id;
+        } catch (PDOException $e) {
+            if ($con->inTransaction()) {
+                $con->rollBack();
+            }
+            throw new Exception("Failed to process prescription logging: " . $e->getMessage());
+        }
+    }
 }
