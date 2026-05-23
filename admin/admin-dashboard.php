@@ -1,6 +1,12 @@
 <?php
 session_start();
 require_once('../class/database.php');
+
+if (!isset($_SESSION['admin_id'])) {
+    header('Location: login.php');
+    exit();
+}
+
 $db = new database();
 $msg = $msgType = '';
 
@@ -30,7 +36,7 @@ if (isset($_POST['update_fee_btn'])) {
 if (isset($_POST['submit_prescription_form'])) {
     try {
         $appointment_id = (int)$_POST['rx_appointment_id'];
-        
+
         // Structure individual array listings safely
         $prescription_items = [];
         if (isset($_POST['med_name']) && is_array($_POST['med_name'])) {
@@ -72,6 +78,7 @@ $pendingRequests = $db->countAppointments('Pending');
 
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -79,40 +86,145 @@ $pendingRequests = $db->countAppointments('Pending');
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
     <style>
-        * { margin: 0; padding: 0; box-sizing: border-box; }
-        body { font-family: Arial, sans-serif; background: #f4f7fb; }
-        .sidebar { width: 250px; height: 100vh; position: fixed; background: #0d1b2a; color: white; padding-top: 20px; }
-        .sidebar h2 { text-align: center; margin-bottom: 35px; font-weight: bold; }
-        .sidebar a { display: block; color: #d6d6d6; text-decoration: none; padding: 15px 25px; transition: 0.3s; }
-        .sidebar a:hover, .sidebar a.active { background: #1b263b; color: white; padding-left: 30px; }
-        .sidebar i { margin-right: 10px; }
-        .main { margin-left: 250px; padding: 25px; }
-        .topbar { background: white; border-radius: 12px; padding: 18px 25px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05); }
-        .logout-btn { background: #dc3545; color: white; text-decoration: none; padding: 10px 15px; border-radius: 8px; transition: 0.3s; }
-        .logout-btn:hover { background: #bb2d3b; }
-        .cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 20px; margin-top: 25px; }
-        .card-box { background: white; border-radius: 15px; padding: 22px; box-shadow: 0 2px 10px rgba(0, 0, 0, 0.06); transition: 0.3s; }
-        .card-box:hover { transform: translateY(-3px); }
-        .card-box .icon { font-size: 32px; margin-bottom: 12px; }
-        .card-box h3 { font-size: 16px; color: #555; }
-        .card-box h1 { margin-top: 8px; font-size: 36px; font-weight: bold; }
-        .table-section { margin-top: 30px; background: white; padding: 25px; border-radius: 15px; box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05); }
-        .table th { background: #0d1b2a; color: white; border-color: #1b263b; }
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: Arial, sans-serif;
+            background: #f4f7fb;
+        }
+
+        .sidebar {
+            width: 250px;
+            height: 100vh;
+            position: fixed;
+            background: #0d1b2a;
+            color: white;
+            padding-top: 20px;
+        }
+
+        .sidebar h2 {
+            text-align: center;
+            margin-bottom: 35px;
+            font-weight: bold;
+        }
+
+        .sidebar a {
+            display: block;
+            color: #d6d6d6;
+            text-decoration: none;
+            padding: 15px 25px;
+            transition: 0.3s;
+        }
+
+        .sidebar a:hover,
+        .sidebar a.active {
+            background: #1b263b;
+            color: white;
+            padding-left: 30px;
+        }
+
+        .sidebar i {
+            margin-right: 10px;
+        }
+
+        .main {
+            margin-left: 250px;
+            padding: 25px;
+        }
+
+        .topbar {
+            background: white;
+            border-radius: 12px;
+            padding: 18px 25px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+        }
+
+        .logout-btn {
+            background: #dc3545;
+            color: white;
+            text-decoration: none;
+            padding: 10px 15px;
+            border-radius: 8px;
+            transition: 0.3s;
+        }
+
+        .logout-btn:hover {
+            background: #bb2d3b;
+        }
+
+        .cards {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            gap: 20px;
+            margin-top: 25px;
+        }
+
+        .card-box {
+            background: white;
+            border-radius: 15px;
+            padding: 22px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.06);
+            transition: 0.3s;
+        }
+
+        .card-box:hover {
+            transform: translateY(-3px);
+        }
+
+        .card-box .icon {
+            font-size: 32px;
+            margin-bottom: 12px;
+        }
+
+        .card-box h3 {
+            font-size: 16px;
+            color: #555;
+        }
+
+        .card-box h1 {
+            margin-top: 8px;
+            font-size: 36px;
+            font-weight: bold;
+        }
+
+        .table-section {
+            margin-top: 30px;
+            background: white;
+            padding: 25px;
+            border-radius: 15px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+        }
+
+        .table th {
+            background: #0d1b2a;
+            color: white;
+            border-color: #1b263b;
+        }
     </style>
 </head>
+
 <body>
 
-    <?php if(file_exists('admin-sidebar.php')) { include 'admin-sidebar.php'; } else { ?>
-    <div class="sidebar">
-        <h2>PM Dental</h2>
-        <a class="active" href="#"><i class="fas fa-chart-line"></i> Dashboard</a>
-        <a href="#"><i class="fas fa-clock"></i> Appointments</a>
-        <a href="#"><i class="fas fa-prescription"></i> Clinical Vault</a>
-    </div>
+    <?php if (file_exists('admin-sidebar.php')) {
+        include 'admin-sidebar.php';
+    } else { ?>
+        <div class="sidebar">
+            <h2>PM Dental</h2>
+            <a class="active" href="admin-dashboard.php"><i class="fas fa-chart-line"></i> Dashboard</a>
+            <a href="appointments.php"><i class="fas fa-clock"></i> Appointments</a>
+            <a href="clinical-vault.php"><i class="fas fa-prescription"></i> Clinical Vault</a>
+        </div>
     <?php } ?>
 
     <div class="main">
-        
+
         <div class="topbar">
             <div>
                 <h3>Welcome, Dr. <?= htmlspecialchars($admin_name); ?></h3>
@@ -130,10 +242,26 @@ $pendingRequests = $db->countAppointments('Pending');
         <?php endif; ?>
 
         <div class="cards">
-            <div class="card-box"><div class="icon text-primary"><i class="fas fa-users"></i></div><h3>Total Users</h3><h1><?= number_format($totalUsers); ?></h1></div>
-            <div class="card-box"><div class="icon text-success"><i class="fas fa-calendar-check"></i></div><h3>Appointments</h3><h1><?= number_format($totalAppointments); ?></h1></div>
-            <div class="card-box"><div class="icon text-warning"><i class="fas fa-clock"></i></div><h3>Pending Arrivals</h3><h1><?= number_format($pendingRequests); ?></h1></div>
-            <div class="card-box"><div class="icon text-danger"><i class="fas fa-user-doctor"></i></div><h3>Dentist Roster</h3><h1><?= number_format($totalDentists); ?></h1></div>
+            <div class="card-box">
+                <div class="icon text-primary"><i class="fas fa-users"></i></div>
+                <h3>Total Users</h3>
+                <h1><?= number_format($totalUsers); ?></h1>
+            </div>
+            <div class="card-box">
+                <div class="icon text-success"><i class="fas fa-calendar-check"></i></div>
+                <h3>Appointments</h3>
+                <h1><?= number_format($totalAppointments); ?></h1>
+            </div>
+            <div class="card-box">
+                <div class="icon text-warning"><i class="fas fa-clock"></i></div>
+                <h3>Pending Arrivals</h3>
+                <h1><?= number_format($pendingRequests); ?></h1>
+            </div>
+            <div class="card-box">
+                <div class="icon text-danger"><i class="fas fa-user-doctor"></i></div>
+                <h3>Dentist Roster</h3>
+                <h1><?= number_format($totalDentists); ?></h1>
+            </div>
         </div>
 
         <div class="row g-4">
@@ -153,18 +281,20 @@ $pendingRequests = $db->countAppointments('Pending');
                                 </tr>
                             </thead>
                             <tbody>
-                                <?php if(empty($clinicalServices)): ?>
-                                    <tr><td colspan="3" class="text-center py-3 text-muted">No procedures tracked.</td></tr>
+                                <?php if (empty($clinicalServices)): ?>
+                                    <tr>
+                                        <td colspan="3" class="text-center py-3 text-muted">No procedures tracked.</td>
+                                    </tr>
                                 <?php else: ?>
-                                    <?php foreach($clinicalServices as $srv): ?>
+                                    <?php foreach ($clinicalServices as $srv): ?>
                                         <tr>
                                             <td class="fw-semibold text-secondary small"><?= htmlspecialchars($srv['Service_Name']); ?></td>
-                                            <td class="fw-bold text-success">$<?= number_format($srv['Service_Fee'], 2); ?></td>
+                                            <td class="fw-bold text-success">₱<?= number_format($srv['Service_Fee'], 2); ?></td>
                                             <td class="text-end">
-                                                <button type="button" class="btn btn-sm btn-outline-primary px-2 update-fee-trigger" 
-                                                        data-id="<?= $srv['Service_ID']; ?>"
-                                                        data-name="<?= htmlspecialchars($srv['Service_Name']); ?>"
-                                                        data-fee="<?= $srv['Service_Fee']; ?>">
+                                                <button type="button" class="btn btn-sm btn-outline-primary px-2 update-fee-trigger"
+                                                    data-id="<?= $srv['Service_ID']; ?>"
+                                                    data-name="<?= htmlspecialchars($srv['Service_Name']); ?>"
+                                                    data-fee="<?= $srv['Service_Fee']; ?>">
                                                     <i class="fa-solid fa-pen-to-square"></i> Edit
                                                 </button>
                                             </td>
@@ -195,7 +325,9 @@ $pendingRequests = $db->countAppointments('Pending');
                             </thead>
                             <tbody>
                                 <?php if (empty($allAppointments) || !is_array($allAppointments)): ?>
-                                    <tr><td colspan="4" class="text-center text-muted py-4">No recent appointments found in directory queue matching grids.</td></tr>
+                                    <tr>
+                                        <td colspan="4" class="text-center text-muted py-4">No recent appointments found in directory queue matching grids.</td>
+                                    </tr>
                                 <?php else: ?>
                                     <?php foreach (array_slice($allAppointments, 0, 6) as $app): ?>
                                         <tr>
@@ -210,13 +342,13 @@ $pendingRequests = $db->countAppointments('Pending');
                                             </td>
                                             <td class="text-end">
                                                 <div class="btn-group gap-1">
-                                                    <button type="button" class="btn btn-sm btn-light border text-primary view-intake-btn" 
-                                                            data-patient-id="<?= $app['Patient_ID'] ?? 0; ?>">
+                                                    <button type="button" class="btn btn-sm btn-light border text-primary view-intake-btn"
+                                                        data-patient-id="<?= $app['Patient_ID'] ?? 0; ?>">
                                                         <i class="fa-solid fa-folder-medical"></i> View Chart
                                                     </button>
                                                     <button type="button" class="btn btn-sm btn-primary write-rx-btn"
-                                                            data-appt-id="<?= $app['Appointment_ID']; ?>"
-                                                            data-patient-fullname="<?= htmlspecialchars(($app['Patient_FN'] ?? '') . ' ' . ($app['Patient_LN'] ?? '')); ?>">
+                                                        data-appt-id="<?= $app['Appointment_ID']; ?>"
+                                                        data-patient-fullname="<?= htmlspecialchars(($app['Patient_FN'] ?? '') . ' ' . ($app['Patient_LN'] ?? '')); ?>">
                                                         <i class="fa-solid fa-pills me-1"></i> + Rx
                                                     </button>
                                                 </div>
@@ -274,10 +406,10 @@ $pendingRequests = $db->countAppointments('Pending');
                             <div class="col-6"><span class="text-muted">Gender Footprint:</span> <strong id="chart_gender" class="d-block text-capitalize text-secondary"></strong></div>
                         </div>
                     </div>
-                    
+
                     <h6 class="fw-bold text-danger border-bottom pb-2 mb-2"><i class="fa-solid fa-notes-medical me-2"></i>Staff Appended Medical History Profile</h6>
                     <div id="history_feed_box" style="max-height: 220px; overflow-y: auto;">
-                        </div>
+                    </div>
                 </div>
                 <div class="modal-footer bg-light p-2">
                     <button type="button" class="btn btn-sm btn-secondary" data-bs-dismiss="modal">Close Profile View</button>
@@ -347,7 +479,7 @@ $pendingRequests = $db->countAppointments('Pending');
             btn.addEventListener('click', function() {
                 const patId = this.getAttribute('data-patient-id');
                 const listbox = document.getElementById('history_feed_box');
-                
+
                 listbox.innerHTML = '<div class="text-center py-3 text-muted small"><div class="spinner-border spinner-border-sm me-2"></div>Accessing baseline medical profiles...</div>';
                 const profileModal = new bootstrap.Modal(document.getElementById('patientIntakeModal'));
                 profileModal.show();
@@ -355,7 +487,7 @@ $pendingRequests = $db->countAppointments('Pending');
                 fetch('?fetch_patient_details=1&patient_id=' + patId)
                     .then(r => r.json())
                     .then(res => {
-                        if(res.error) {
+                        if (res.error) {
                             listbox.innerHTML = `<div class="alert alert-warning small p-2">${res.error}</div>`;
                             return;
                         }
@@ -365,7 +497,7 @@ $pendingRequests = $db->countAppointments('Pending');
                         document.getElementById('chart_gender').innerText = res.Patient_Gender || 'unspecified';
 
                         listbox.innerHTML = '';
-                        if(!res.medical_history || res.medical_history.length === 0) {
+                        if (!res.medical_history || res.medical_history.length === 0) {
                             listbox.innerHTML = '<div class="text-center text-muted small py-4 bg-white border rounded">No historical parameters logged yet for this patient timeline.</div>';
                             return;
                         }
@@ -418,4 +550,5 @@ $pendingRequests = $db->countAppointments('Pending');
         });
     </script>
 </body>
+
 </html>

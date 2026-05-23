@@ -56,8 +56,8 @@ if (isset($_POST["btnRegister"])) {
             $last_nameErr = "Too short";
         } elseif (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
             $emailErr = "Invalid email format";
-        } elseif (strlen($password) < 6) {
-            $passwordErr = "Password must be at least 6 characters";
+        } elseif (strlen($password) < 8) {
+            $passwordErr = "Password must be at least 8 characters";
         } elseif ($password !== $confirm_password) {
             $confirm_passwordErr = "Passwords do not match!";
         } else {

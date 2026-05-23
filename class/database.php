@@ -65,7 +65,7 @@ class database
     {
         $con = $this->opencon();
         try {
-            $stmt = $con->prepare("SELECT ua.*, e.Employee_ID, d.Dentist_ID 
+            $stmt = $con->prepare("SELECT ua.*, e.Employee_ID, e.Employee_FN, e.Employee_LN, d.Dentist_ID, d.Dentist_FN, d.Dentist_LN 
                 FROM user_accounts ua
                 LEFT JOIN employee e ON ua.employee_id = e.Employee_ID
                 LEFT JOIN dentist d ON ua.dentist_id = d.Dentist_ID
@@ -76,10 +76,16 @@ class database
 
 
             if ($user && $passwords == $user['passwords']) {
+                $fullName = trim(
+                    ($user['Employee_FN'] ?? $user['Dentist_FN'] ?? '') . ' ' .
+                    ($user['Employee_LN'] ?? $user['Dentist_LN'] ?? '')
+                );
+
                 return [
                     'id'           => $user['Employee_ID'] ?? $user['Dentist_ID'],
                     'email'        => $user['email'],
-                    'account_type' => $user['account_type']
+                    'account_type' => $user['account_type'],
+                    'name'         => $fullName ?: 'PM Dental User'
                 ];
             }
 

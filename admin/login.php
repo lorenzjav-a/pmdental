@@ -37,12 +37,8 @@ if (isset($_POST['btnLogin'])) {
                 $_SESSION['user_id'] = $user['id'];
                 $_SESSION['email'] = $user['email'];
                 $_SESSION['account_type'] = $user['account_type'];
-
-                // FIX: Populate admin_id if an admin/employee logs in to support your admin workspace pages
-                if ($user['account_type'] == 1) {
-                    $_SESSION['admin_id'] = $user['id'];
-                    $_SESSION['admin_name'] = 'Staff Member';
-                }
+                $_SESSION['admin_id'] = $user['id'];
+                $_SESSION['admin_name'] = $user['name'] ?? ($user['account_type'] == 1 ? 'Staff Member' : 'Attending Dentist');
 
                 $loginStatus = "success";
                 $loginMessage = "Login successful!";

@@ -157,10 +157,11 @@ if (isset($_POST['execute_checkout'])) {
           <div class="mb-3">
             <h4 class="mb-0 fw-bold text-dark">Patient Appointments Queue</h4>
             <p class="text-muted small mb-0">Review pending arrivals and match records with dynamic doctor assignments</p>
+            <input id="appointmentsSearch" type="search" class="form-control form-control-sm mt-3" placeholder="Search appointments by ID, patient, service, status...">
           </div>
 
           <div class="table-responsive">
-            <table class="table table-hover align-middle">
+            <table id="appointmentsTable" class="table table-hover align-middle">
               <thead class="table-light">
                 <tr>
                   <th>Appointment ID</th>
@@ -233,10 +234,11 @@ if (isset($_POST['execute_checkout'])) {
           <div class="mb-3">
             <h4 class="mb-0 fw-bold text-dark">Patient Profile Masterlist</h4>
             <p class="text-muted small mb-0">Browse complete baseline client credentials and append history charts</p>
+            <input id="patientsSearch" type="search" class="form-control form-control-sm mt-3" placeholder="Search patients by name, ID, phone, gender...">
           </div>
 
           <div class="table-responsive">
-            <table class="table table-hover align-middle">
+            <table id="patientsTable" class="table table-hover align-middle">
               <thead class="table-light">
                 <tr>
                   <th>Patient ID</th>
@@ -405,7 +407,7 @@ if (isset($_POST['execute_checkout'])) {
           <div class="mb-3">
             <label class="form-label small fw-medium">Total Balance Statement Due</label>
             <div class="input-group">
-              <span class="input-group-text fw-bold">$</span>
+              <span class="input-group-text fw-bold">₱</span>
               <input type="text" id="checkout_amount" class="form-control fw-bold text-danger bg-white" readonly>
             </div>
           </div>
@@ -537,6 +539,46 @@ if (isset($_POST['execute_checkout'])) {
           cal.addEventSource(events);
         });
     });
+
+    function installTableSearch(inputId, tableId) {
+      const input = document.getElementById(inputId);
+      const table = document.getElementById(tableId);
+      if (!input || !table) return;
+
+      input.addEventListener('input', function() {
+        const query = this.value.trim().toLowerCase();
+        const rows = table.querySelectorAll('tbody tr');
+        let visibleCount = 0;
+
+        rows.forEach(row => {
+          if (row.id && row.id.endsWith('_no_results')) {
+            return;
+          }
+          const text = row.textContent.toLowerCase();
+          const isVisible = query === '' || text.includes(query);
+          row.style.display = isVisible ? '' : 'none';
+          if (isVisible) visibleCount += 1;
+        });
+
+        const noResultsRowId = tableId + '_no_results';
+        let noResultsRow = document.getElementById(noResultsRowId);
+
+        if (visibleCount > 0 || query === '') {
+          if (noResultsRow) noResultsRow.remove();
+          return;
+        }
+
+        if (!noResultsRow) {
+          noResultsRow = document.createElement('tr');
+          noResultsRow.id = noResultsRowId;
+          noResultsRow.innerHTML = '<td colspan="' + table.querySelectorAll('thead th').length + '" class="text-center text-muted py-4">No matching records found.</td>';
+          table.querySelector('tbody').appendChild(noResultsRow);
+        }
+      });
+    }
+
+    installTableSearch('appointmentsSearch', 'appointmentsTable');
+    installTableSearch('patientsSearch', 'patientsTable');
   </script>
 
 </body>

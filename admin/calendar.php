@@ -1,49 +1,52 @@
-
-<?php
+﻿<?php
+session_start();
 require_once('../class/database.php');
 $db = new database();
-$activePage = 'calendar';
-$calendarEvents = [];
 
-$rows = $db->getDentistCalendarEvents();
-foreach ($rows as $row) {
-    $calendarEvents[] = [
-        'id' => $row['Den_Calendar_ID'],
-        'title' => 'Dentist #' . $row['Dentist_ID'],
-        'start' => $row['Schedule_Date'] . ' ' . $row['Start_Time'],
-        'end' => $row['Schedule_Date'] . ' ' . $row['End_Time']
-    ];
+if (!isset($_SESSION['admin_id'])) {
+    header('Location: login.php');
+    exit();
 }
+
+if (isset($_GET['fetch_dentist_calendar'], $_GET['dentist_id'])) {
+    header('Content-Type: application/json');
+    $appointments = $db->getDentistAppointments((int)$_GET['dentist_id']);
+    $events = [];
+    foreach ($appointments as $appt) {
+        $events[] = [
+            'id' => $appt['Appointment_ID'],
+            'title' => trim((!empty($appt['Service_Name']) ? $appt['Service_Name'] . ' - ' : '') . ($appt['Patient_FN'] ?? '') . ' ' . ($appt['Patient_LN'] ?? '')),
+            'start' => $appt['Appointment_Date'],
+            'color' => $appt['Appointment_Status'] === 'Confirmed' ? '#198754' : '#ffc107',
+            'extendedProps' => [
+                'status' => $appt['Appointment_Status'] ?? 'Pending',
+                'patient' => trim(($appt['Patient_FN'] ?? '') . ' ' . ($appt['Patient_LN'] ?? '')),
+                'service' => $appt['Service_Name'] ?? ''
+            ]
+        ];
+    }
+    echo json_encode($events);
+    exit();
+}
+
+$dentists = $db->viewDentists();
+$activePage = 'calendar';
 ?>
 <!DOCTYPE html>
-<html>
+<html lang="en">
+
 <head>
-    <link href="//maxcdn.bootstrapcdn.com/bootstrap/3.3.0/css/bootstrap.min.css" rel="stylesheet" id="bootstrap-css">
-    <link href="https://fonts.googleapis.com/css?family=Roboto:100,100i,300,300i,400,400i,500,500i,700,700i,900,900i" rel="stylesheet">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dentist Calendar - PM Dental Admin</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.11/index.global.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
-    <link rel="stylesheet" href="../styles.css"> 
-    <link rel="stylesheet" href="https://code.jquery.com/ui/1.11.4/themes/smoothness/jquery-ui.css">
-    <link rel="stylesheet" href="../sweetalert/dist/sweetalert2.css">
-    <script src="//code.jquery.com/jquery-1.11.1.min.js"></script>
-    <script src="https://code.jquery.com/ui/1.11.4/jquery-ui.min.js"></script>
-    <script src="../sweetalert/dist/sweetalert2.js"></script>
-    <script src="script.js"></script> 
-    
     <style>
         body {
-            margin-bottom: 40px;
-            margin-top: 40px;
-            font-size: 14px;
+            margin: 0;
             font-family: 'Roboto', sans-serif;
-            background: url(http://www.digiphotohub.com/wp-content/uploads/2015/09/bigstock-Abstract-Blurred-Background-Of-92820527.jpg) no-repeat center center fixed;
-            background-size: cover;
-        }
-
-        #calendar {
-            background-color: #FFFFFF;
-            border-radius: 6px;
-            padding: 20px;
-            box-shadow: 0px 0px 21px 2px rgba(0, 0, 0, 0.18);
+            background: #eef2f7;
         }
 
         .sidebar {
@@ -55,7 +58,6 @@ foreach ($rows as $row) {
             background: #0d1b2a;
             color: white;
             padding-top: 20px;
-            z-index: 1000;
         }
 
         .sidebar h2 {
@@ -86,120 +88,114 @@ foreach ($rows as $row) {
         .main {
             margin-left: 250px;
             padding: 25px;
+            min-height: 100vh;
         }
 
-        .fc-event, .fc-event-inner, .fc-event-title, .fc-event-time {
-            cursor: pointer !important;
+        .calendar-card {
+            background: #ffffff;
+            border-radius: 18px;
+            padding: 24px;
+            box-shadow: 0 18px 40px rgba(15, 23, 42, 0.08);
+            min-height: 720px;
         }
-        .fc-event-bg {
-            pointer-events: none !important;
+
+        #dentistCalendar {
+            background: #ffffff;
+            border-radius: 12px;
+            padding: 18px;
+            box-shadow: 0 10px 25px rgba(15, 23, 42, 0.06);
+        }
+
+        .page-title {
+            font-size: 1.6rem;
+            font-weight: 700;
+        }
+
+        .page-description {
+            color: #6b7280;
+            margin-top: 0.35rem;
         }
     </style>
-
-    <script>
-        $(document).ready(function() {
-            var date = new Date();
-            var d = date.getDate();
-            var m = date.getMonth();
-            var y = date.getFullYear();
-            
-            // Global variable to remember the clicked event
-            var selectedEventInstance = null;
-            var dbEvents = <?php echo json_encode($calendarEvents); ?>;
-            var storedEvents = dbEvents.slice();
-
-            /* initialize the calendar */
-            var calendar = $('#calendar').fullCalendar({
-                header: {
-                    left: 'title',
-                    center: 'agendaDay,agendaWeek,month',
-                    right: 'prev,next today'
-                },
-                editable: true,
-                firstDay: 1, 
-                selectable: true,
-                defaultView: 'month',
-                axisFormat: 'h:mm',
-                
-                // ADD EVENT
-                select: function(start, end, allDay) {
-                    var title = prompt('Add New Event Title:');
-                    if (title) {
-                        var customId = 'evt_' + new Date().getTime();
-                        var newEvent = {
-                            id: customId,
-                            title: title,
-                            start: start,
-                            end: end,
-                            allDay: allDay
-                        };
-                        storedEvents.push(newEvent);
-                        calendar.fullCalendar('renderEvent', newEvent, true);
-                    }
-                    calendar.fullCalendar('unselect');
-                },
-
-                // DELETE EVENT CLICK
-                eventClick: function(event, jsEvent, view) {
-                    jsEvent.preventDefault();
-                    jsEvent.stopPropagation();
-
-                    selectedEventInstance = event;
-                    var title = event.title || 'this event';
-
-                    if (typeof Swal !== 'undefined' && Swal.fire) {
-                        Swal.fire({
-                            title: 'Delete Event',
-                            text: 'Are you sure you want to delete "' + title + '"?',
-                            icon: 'warning',
-                            showCancelButton: true,
-                            confirmButtonText: 'Delete',
-                            cancelButtonText: 'Cancel',
-                            reverseButtons: true
-                        }).then(function(result) {
-                            if (result.isConfirmed) {
-                                deleteSelectedEvent();
-                            }
-                        });
-                    } else {
-                        console.warn('Swal not available, using confirm fallback');
-                        var confirmed = window.confirm('Delete event "' + title + '"?');
-                        if (confirmed) {
-                            deleteSelectedEvent();
-                        }
-                    }
-
-                    return false;
-                },
-
-                // Load events from the database
-                events: storedEvents
-            });
-
-            function deleteSelectedEvent() {
-                if (selectedEventInstance) {
-                    var finalTargetId = selectedEventInstance.id || selectedEventInstance._id;
-                    $('#calendar').fullCalendar('removeEvents', finalTargetId);
-                    storedEvents = storedEvents.filter(function(evt) {
-                        return String(evt.id) !== String(finalTargetId);
-                    });
-                    selectedEventInstance = null;
-                }
-            }
-        });
-    </script>
 </head>
 
 <body>
     <?php include 'admin-sidebar.php'; ?>
     <div class="main">
-        <div class="container">
+        <div class="container-fluid">
+            <div class="row mb-4">
+                <div class="col-lg-8">
+                    <div class="page-title">Dentist Calendar</div>
+                    <p class="page-description">Select a dentist to load their confirmed and pending appointment roster.</p>
+                </div>
+            </div>
+
             <div class="row">
-                <div class="col-md-10 col-md-offset-1">
-                    <div id='calendar'></div>
+                <div class="col-12">
+                    <div class="calendar-card">
+                        <div class="row align-items-center mb-4">
+                            <div class="col-md-6">
+                                <h5 class="fw-bold mb-0">Dentist roster viewer</h5>
+                                <p class="text-muted small mb-0">Choose a dentist to see their schedule on the calendar.</p>
+                            </div>
+                            <div class="col-md-6">
+                                <select id="dentistPicker" class="form-select">
+                                    <option value="" selected disabled>Choose a dentist...</option>
+                                    <?php foreach ($dentists as $dentist): ?>
+                                        <option value="<?= $dentist['Dentist_ID']; ?>">Dr. <?= htmlspecialchars(trim($dentist['Dentist_FN'] . ' ' . $dentist['Dentist_LN'])); ?></option>
+                                    <?php endforeach; ?>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div id="dentistCalendar"></div>
+                    </div>
                 </div>
             </div>
         </div>
     </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.11/index.global.min.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            var calendarEl = document.getElementById('dentistCalendar');
+            var calendar = new FullCalendar.Calendar(calendarEl, {
+                initialView: 'dayGridMonth',
+                height: 680,
+                headerToolbar: {
+                    left: 'prev,next today',
+                    center: 'title',
+                    right: 'dayGridMonth,timeGridWeek,timeGridDay'
+                },
+                events: [],
+                eventDisplay: 'block',
+                eventMinHeight: 35
+            });
+
+            calendar.render();
+
+            var picker = document.getElementById('dentistPicker');
+            picker.addEventListener('change', function() {
+                var dentistId = this.value;
+                if (!dentistId) {
+                    return;
+                }
+
+                fetch('calendar.php?fetch_dentist_calendar=1&dentist_id=' + dentistId)
+                    .then(function(response) {
+                        return response.json();
+                    })
+                    .then(function(events) {
+                        calendar.removeAllEvents();
+                        calendar.addEventSource(events);
+                    })
+                    .catch(function(error) {
+                        console.error('Calendar load failed:', error);
+                        calendar.removeAllEvents();
+                    });
+            });
+        });
+    </script>
 </body>
+
 </html>
