@@ -3,20 +3,21 @@ session_start();
 require_once('../class/database.php');
 $db = new database();
 
-if (!isset($_SESSION['admin_id'])) {
+if (!isset($_SESSION['admin_id']) && !isset($_SESSION['user_id'])) {
     header('Location: login.php');
     exit();
 }
 
 if (isset($_GET['fetch_dentist_calendar'], $_GET['dentist_id'])) {
     header('Content-Type: application/json');
-    $appointments = $db->getDentistAppointments((int)$_GET['dentist_id']);
+    $dentist_id = intval($_GET['dentist_id']);
+    $appointments = $db->getDentistAppointments($dentist_id);
     $events = [];
     foreach ($appointments as $appt) {
         $events[] = [
             'id' => $appt['Appointment_ID'],
             'title' => trim((!empty($appt['Service_Name']) ? $appt['Service_Name'] . ' - ' : '') . ($appt['Patient_FN'] ?? '') . ' ' . ($appt['Patient_LN'] ?? '')),
-            'start' => $appt['Appointment_Date'],
+            'start' => date('Y-m-d\TH:i:s', strtotime($appt['Appointment_Date'])),
             'color' => $appt['Appointment_Status'] === 'Confirmed' ? '#198754' : '#ffc107',
             'extendedProps' => [
                 'status' => $appt['Appointment_Status'] ?? 'Pending',
@@ -174,13 +175,8 @@ $activePage = 'calendar';
 
             calendar.render();
 
-            var picker = document.getElementById('dentistPicker');
-            picker.addEventListener('change', function() {
-                var dentistId = this.value;
-                if (!dentistId) {
-                    return;
-                }
-
+            function loadDentistSchedule(dentistId) {
+                if (!dentistId) return;
                 fetch('calendar.php?fetch_dentist_calendar=1&dentist_id=' + dentistId)
                     .then(function(response) {
                         return response.json();
@@ -188,11 +184,12 @@ $activePage = 'calendar';
                     .then(function(events) {
                         calendar.removeAllEvents();
                         calendar.addEventSource(events);
-                    })
-                    .catch(function(error) {
-                        console.error('Calendar load failed:', error);
-                        calendar.removeAllEvents();
                     });
+            }
+
+            var picker = document.getElementById('dentistPicker');
+            picker.addEventListener('change', function() {
+                loadDentistSchedule(this.value);
             });
         });
     </script>

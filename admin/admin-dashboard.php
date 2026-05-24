@@ -312,9 +312,10 @@ $pendingRequests = $db->countAppointments('Pending');
                     <div class="mb-3">
                         <h4 class="fw-bold text-dark mb-1">Clinical Case Records Queue</h4>
                         <p class="text-muted small mb-0">Audit baseline staff medical histories or compile prescription formulas</p>
+                        <input id="caseQueueSearch" type="search" class="form-control form-control-sm mt-3" placeholder="Search records by patient, date, status...">
                     </div>
                     <div class="table-responsive">
-                        <table class="table table-hover align-middle">
+                        <table id="caseQueueTable" class="table table-hover align-middle">
                             <thead>
                                 <tr>
                                     <th>Patient</th>
@@ -548,6 +549,46 @@ $pendingRequests = $db->countAppointments('Pending');
                 }
             }
         });
+    </script>
+    <script>
+        function installTableSearch(inputId, tableId) {
+            const input = document.getElementById(inputId);
+            const table = document.getElementById(tableId);
+            if (!input || !table) return;
+
+            input.addEventListener('input', function() {
+                const query = this.value.trim().toLowerCase();
+                const rows = table.querySelectorAll('tbody tr');
+                let visibleCount = 0;
+
+                rows.forEach(row => {
+                    if (row.id && row.id.endsWith('_no_results')) {
+                        return;
+                    }
+                    const text = row.textContent.toLowerCase();
+                    const isVisible = query === '' || text.includes(query);
+                    row.style.display = isVisible ? '' : 'none';
+                    if (isVisible) visibleCount += 1;
+                });
+
+                const noResultsRowId = tableId + '_no_results';
+                let noResultsRow = document.getElementById(noResultsRowId);
+
+                if (visibleCount > 0 || query === '') {
+                    if (noResultsRow) noResultsRow.remove();
+                    return;
+                }
+
+                if (!noResultsRow) {
+                    noResultsRow = document.createElement('tr');
+                    noResultsRow.id = noResultsRowId;
+                    noResultsRow.innerHTML = '<td colspan="' + table.querySelectorAll('thead th').length + '" class="text-center text-muted py-4">No matching records found.</td>';
+                    table.querySelector('tbody').appendChild(noResultsRow);
+                }
+            });
+        }
+
+        installTableSearch('caseQueueSearch', 'caseQueueTable');
     </script>
 </body>
 

@@ -17,22 +17,6 @@ if (isset($_GET['fetch_prescription_json'], $_GET['patient_id'])) {
   exit();
 }
 
-// EXISTING AJAX ENDPOINT: Fetch calendar data
-if (isset($_GET['fetch_dentist_calendar'], $_GET['dentist_id'])) {
-  header('Content-Type: application/json');
-  $appts = $con->getDentistAppointments((int)$_GET['dentist_id']);
-  $events = [];
-  foreach ($appts as $a) {
-    $events[] = [
-      'title' => $a['Patient_FN'] . ' ' . $a['Patient_LN'],
-      'start' => $a['Appointment_Date'],
-      'color' => $a['Appointment_Status'] === 'Confirmed' ? '#198754' : '#ffc107',
-    ];
-  }
-  echo json_encode($events);
-  exit();
-}
-
 $current_employee_id = $_SESSION['user_id'];
 
 $allAppointments = $con->viewAppointments();
@@ -53,6 +37,13 @@ if (isset($_POST['assign_dentist'])) {
     $assignStatus = 'success';
     $assignMessage = 'Dentist assigned and appointment confirmed successfully!';
     $allAppointments = $con->viewAppointments();
+    // capture assigned appointment date to guide the calendar view
+    $_assignedAppt = $con->getAppointmentById((int)$appointment_id);
+    if ($_assignedAppt && !empty($_assignedAppt['Appointment_Date'])) {
+      // normalize to date-only ISO (YYYY-MM-DD) to avoid timezone/parsing inconsistencies
+      $assignedAppointmentDate = date('Y-m-d', strtotime($_assignedAppt['Appointment_Date']));
+      $assignedDentistId = (int)$dentist_id;
+    }
   } catch (Exception $e) {
     $assignStatus = 'error';
     $assignMessage = $e->getMessage();
@@ -531,14 +522,25 @@ if (isset($_POST['execute_checkout'])) {
     });
     cal.render();
 
-    document.getElementById('dentistPicker').addEventListener('change', function() {
-      fetch('employee-dashboard.php?fetch_dentist_calendar=1&dentist_id=' + this.value)
+    function loadDentistSchedule(dentistId) {
+      if (!dentistId) return;
+      fetch('calendar.php?fetch_dentist_calendar=1&dentist_id=' + dentistId)
         .then(r => r.json())
         .then(events => {
           cal.removeAllEvents();
           cal.addEventSource(events);
         });
+    }
+
+    document.getElementById('dentistPicker').addEventListener('change', function() {
+      loadDentistSchedule(this.value);
     });
+
+    const assignedDentistId = <?php echo json_encode($assignedDentistId ?? null); ?>;
+    if (assignedDentistId) {
+      document.getElementById('dentistPicker').value = assignedDentistId;
+      loadDentistSchedule(assignedDentistId);
+    }
 
     function installTableSearch(inputId, tableId) {
       const input = document.getElementById(inputId);

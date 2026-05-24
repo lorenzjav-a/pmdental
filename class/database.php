@@ -205,6 +205,18 @@ class database
         }
     }
 
+    function getAppointmentById($appointment_id)
+    {
+        $con = $this->opencon();
+        try {
+            $stmt = $con->prepare("SELECT * FROM appointment WHERE Appointment_ID = ? LIMIT 1");
+            $stmt->execute([$appointment_id]);
+            return $stmt->fetch(PDO::FETCH_ASSOC);
+        } catch (PDOException $e) {
+            return false;
+        }
+    }
+
     function viewPatients()
     {
         $con = $this->opencon();
