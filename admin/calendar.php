@@ -17,7 +17,8 @@ if (isset($_GET['fetch_dentist_calendar'], $_GET['dentist_id'])) {
         $events[] = [
             'id' => $appt['Appointment_ID'],
             'title' => trim((!empty($appt['Service_Name']) ? $appt['Service_Name'] . ' - ' : '') . ($appt['Patient_FN'] ?? '') . ' ' . ($appt['Patient_LN'] ?? '')),
-            'start' => date('Y-m-d\TH:i:s', strtotime($appt['Appointment_Date'])),
+            // Use full ISO 8601 with timezone offset so the client interprets the event time correctly
+            'start' => date('c', strtotime($appt['Appointment_Date'])),
             'color' => $appt['Appointment_Status'] === 'Confirmed' ? '#198754' : '#ffc107',
             'extendedProps' => [
                 'status' => $appt['Appointment_Status'] ?? 'Pending',

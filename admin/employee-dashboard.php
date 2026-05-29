@@ -19,6 +19,7 @@ if (isset($_GET['fetch_prescription_json'], $_GET['patient_id'])) {
 
 $current_employee_id = $_SESSION['user_id'];
 
+$activePage = 'dashboard';
 $allAppointments = $con->viewAppointments();
 $allDentists = $con->viewDentists();
 $allPatients = $con->viewPatients();
@@ -27,6 +28,9 @@ $assignStatus = null;
 $assignMessage = '';
 $alertStatus = null;
 $alertMessage = '';
+$appointmentCount = is_array($allAppointments) ? count($allAppointments) : 0;
+$patientCount = is_array($allPatients) ? count($allPatients) : 0;
+$dentistCount = is_array($allDentists) ? count($allDentists) : 0;
 
 if (isset($_POST['assign_dentist'])) {
   $appointment_id = $_POST['appointment_id'];
@@ -94,9 +98,83 @@ if (isset($_POST['execute_checkout'])) {
   <link href="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.11/index.global.min.css" rel="stylesheet">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
   <script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.11/index.global.min.js"></script>
+  <style>
+    body {
+      min-height: 100vh;
+      background: #f4f7fb;
+    }
+    #employeeSidebar {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 240px;
+      height: 100vh;
+      background: #0d1b2a;
+      color: #fff;
+      z-index: 1050;
+      overflow-y: auto;
+      padding-top: 1.5rem;
+    }
+    #employeeSidebar .sidebar-brand {
+      font-size: 1.25rem;
+      font-weight: 700;
+      padding: 0 1.5rem;
+      margin-bottom: 1.5rem;
+      display: block;
+      color: #fff;
+    }
+    #employeeSidebar .sidebar-links {
+      padding: 0 1.2rem;
+    }
+    #employeeSidebar .sidebar-links a {
+      display: block;
+      color: #d6d6d6;
+      padding: 0.9rem 0.75rem;
+      text-decoration: none;
+      border-radius: 0.65rem;
+      margin-bottom: 0.35rem;
+      transition: background 0.2s, color 0.2s;
+    }
+    #employeeSidebar .sidebar-links a.active,
+    #employeeSidebar .sidebar-links a:hover {
+      background: #1b263b;
+      color: #fff;
+    }
+    #employeeSidebar .sidebar-heading {
+      margin: 1.5rem 0 0.65rem 0.75rem;
+      font-size: 0.78rem;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: #8fa5c1;
+    }
+    nav.navbar {
+      margin-left: 260px;
+      transition: margin-left 0.2s ease;
+    }
+    #dashboardMain {
+      margin-left: 260px;
+      padding-top: 1.5rem;
+      padding-bottom: 3rem;
+    }
+    @media (max-width: 992px) {
+      #employeeSidebar {
+        position: relative;
+        height: auto;
+        width: 100%;
+      }
+      nav.navbar {
+        margin-left: 0;
+      }
+      #dashboardMain {
+        margin-left: 0;
+      }
+    }
+  </style>
 </head>
 
 <body class="bg-light">
+
+  <?php include 'employee-sidebar.php'; ?>
 
   <nav class="navbar navbar-expand-lg bg-white border-bottom sticky-top">
     <div class="container">
@@ -116,7 +194,7 @@ if (isset($_POST['execute_checkout'])) {
     </div>
   </nav>
 
-  <main class="container py-4">
+  <main id="dashboardMain" class="container py-4">
 
     <div class="row g-4 mb-4">
       <div class="col-12">
@@ -159,6 +237,7 @@ if (isset($_POST['execute_checkout'])) {
                   <th>Patient Name</th>
                   <th>Contact Info</th>
                   <th>Requested Service</th>
+                  <th>Consultation Fee</th>
                   <th>Target Date</th>
                   <th>Status</th>
                   <th class="text-end">Action</th>
@@ -167,47 +246,57 @@ if (isset($_POST['execute_checkout'])) {
               <tbody>
                 <?php if (empty($allAppointments) || !is_array($allAppointments)): ?>
                   <tr>
-                    <td colspan="7" class="text-center text-muted py-4">No logged records found inside the queue matrix.</td>
+                    <td colspan="8" class="text-center text-muted py-4">No logged records found inside the queue matrix.</td>
                   </tr>
                 <?php else: ?>
                   <?php foreach ($allAppointments as $app) {
-                    $statusBadge = ($app['Appointment_Status'] == 'Confirmed') ? 'bg-success' : 'bg-warning text-dark';
+                    $paymentStatus = strtolower($app['Payment_Status'] ?? 'pending');
+                    $appointmentStatus = strtolower($app['Appointment_Status'] ?? 'pending');
+                    $statusBadge = $appointmentStatus === 'confirmed' ? 'bg-success' : ($appointmentStatus === 'completed' ? 'bg-secondary text-white' : 'bg-warning text-dark');
                     $serviceName = !empty($app['Service_Name']) ? $app['Service_Name'] : 'Not Specified';
                     $fullName = htmlspecialchars(($app['Patient_FN'] ?? '') . ' ' . ($app['Patient_LN'] ?? ''));
                     $paymentAmount = number_format($app['Payment_Amount'] ?? 0.00, 2);
+                    $checkoutDisabled = $paymentStatus === 'paid' || $appointmentStatus === 'completed';
+                    $checkoutButtonClass = $checkoutDisabled ? 'btn btn-sm btn-success px-2 disabled' : 'btn btn-sm btn-success px-2';
+                    $checkoutButtonLabel = $checkoutDisabled ? 'Settled' : 'Checkout';
+                    $showMatchButton = !in_array($appointmentStatus, ['confirmed', 'completed'], true);
 
                     echo '<tr>';
                     echo '<td>#' . $app['Appointment_ID'] . '</td>';
                     echo '<td class="fw-medium">' . $fullName . '</td>';
                     echo '<td>' . htmlspecialchars($app['Patient_PhoneNo'] ?? '') . '</td>';
                     echo '<td><span class="badge bg-light text-dark border">' . htmlspecialchars($serviceName) . '</span></td>';
+                    echo '<td><span class="badge bg-light text-dark border">₱' . number_format($app['Service_Fee'] ?? 0.00, 2) . '</span></td>';
                     echo '<td>' . date('M d, Y - h:i A', strtotime($app['Appointment_Date'])) . '</td>';
-                    echo '<td><span class="badge ' . $statusBadge . '">' . $app['Appointment_Status'] . '</span></td>';
+                    echo '<td><span class="badge ' . $statusBadge . '">' . htmlspecialchars($app['Appointment_Status'] ?? 'Pending') . '</span></td>';
                     echo '<td class="text-end d-flex justify-content-end gap-1">';
 
-                    if ($app['Appointment_Status'] != 'Confirmed') {
-                      echo '<button type="button" class="btn btn-sm btn-primary px-2" 
-                              data-bs-toggle="modal" 
-                              data-bs-target="#assignModal" 
-                              data-app-id="' . $app['Appointment_ID'] . '" 
-                              data-patient-name="' . $fullName . '"
-                            >Match Dentist</button>';
+                    if ($showMatchButton) {
+                      echo '<button type="button" class="btn btn-sm btn-primary px-2" '
+                        . 'data-bs-toggle="modal" '
+                        . 'data-bs-target="#assignModal" '
+                        . 'data-app-id="' . $app['Appointment_ID'] . '" '
+                        . 'data-patient-name="' . $fullName . '" '
+                        . 'data-app-date="' . htmlspecialchars($app['Appointment_Date']) . '"'
+                        . '>Match Dentist</button>';
                     } else {
-                      echo '<button class="btn btn-sm btn-outline-secondary px-2" disabled>Assigned</button>';
+                      echo '<button class="btn btn-sm btn-outline-secondary px-2" disabled>' . ($appointmentStatus === 'completed' ? 'Completed' : 'Assigned') . '</button>';
                     }
 
                     // CLEANED/REMOVED: The repetitive "View Dentist Rx" button has been cleanly taken out of here
 
-                    echo '<button type="button" class="btn btn-sm btn-success px-2"
+                    echo '<button type="button" class="' . $checkoutButtonClass . '"' . ($checkoutDisabled ? ' disabled' : '') . '
                             data-bs-toggle="modal"
                             data-bs-target="#checkoutModal"
                             data-app-id="' . $app['Appointment_ID'] . '"
                             data-patient-name="' . $fullName . '"
                             data-service="' . htmlspecialchars($serviceName) . '"
-                            data-amount="' . $paymentAmount . '"
+                            data-amount="' . ($app['Payment_Amount'] ?? $app['Service_Fee'] ?? 0.00) . '"
+                            data-service-fee="' . ($app['Service_Fee'] ?? 0.00) . '"
                             data-method="' . htmlspecialchars($app['Payment_Method'] ?? 'Cash') . '"
-                            data-status="' . htmlspecialchars($app['Payment_Status'] ?? 'Pending') . '"
-                          >Checkout</button>';
+                            data-payment-status="' . htmlspecialchars($app['Payment_Status'] ?? 'Pending') . '"
+                            data-app-status="' . htmlspecialchars($app['Appointment_Status'] ?? 'Pending') . '"
+                          >' . $checkoutButtonLabel . '</button>';
 
                     echo '</td></tr>';
                   } ?>
@@ -292,6 +381,7 @@ if (isset($_POST['execute_checkout'])) {
             <div class="mb-3 bg-light p-3 rounded">
               <span class="text-muted small d-block">Processing Patient:</span>
               <strong id="modal_patient_name" class="fs-5 text-primary"></strong>
+              <div class="mt-2"><span class="text-muted small d-block">Requested Time:</span><strong id="modal_appointment_date" class="text-dark"></strong></div>
             </div>
             <div class="mb-4">
               <label class="form-label small fw-medium">Available Specialists Matrix</label>
@@ -439,6 +529,13 @@ if (isset($_POST['execute_checkout'])) {
       if (!btn) return;
       document.getElementById('modal_appointment_id').value = btn.getAttribute('data-app-id') || '';
       document.getElementById('modal_patient_name').innerText = btn.getAttribute('data-patient-name') || '';
+      const raw = btn.getAttribute('data-app-date') || '';
+      try {
+        let pretty = raw ? new Date(raw.replace(' ', 'T')).toLocaleString() : '';
+        document.getElementById('modal_appointment_date').innerText = pretty;
+      } catch (e) {
+        document.getElementById('modal_appointment_date').innerText = raw;
+      }
     });
 
     const historyModal = document.getElementById("historyModal");
@@ -453,12 +550,24 @@ if (isset($_POST['execute_checkout'])) {
     checkoutModal.addEventListener('show.bs.modal', function(event) {
       const btn = event.relatedTarget;
       if (!btn) return;
+      const checkoutSubmit = checkoutModal.querySelector('button[name="execute_checkout"]');
+      const paymentStatus = (btn.getAttribute('data-payment-status') || 'Pending').toLowerCase();
+      const appStatus = (btn.getAttribute('data-app-status') || 'Pending').toLowerCase();
+
       document.getElementById('checkout_appointment_id').value = btn.getAttribute('data-app-id') || '';
       document.getElementById('checkout_patient_name').innerText = btn.getAttribute('data-patient-name') || '';
       document.getElementById('checkout_service_name').innerText = btn.getAttribute('data-service') || '';
       document.getElementById('checkout_amount').value = btn.getAttribute('data-amount') || '0.00';
       document.getElementById('checkout_method').value = btn.getAttribute('data-method') || 'Cash';
       document.getElementById('checkout_status').value = btn.getAttribute('data-status') || 'Pending';
+
+      if (paymentStatus === 'paid' || appStatus === 'completed') {
+        checkoutSubmit.disabled = true;
+        checkoutSubmit.innerText = 'Already Settled';
+      } else {
+        checkoutSubmit.disabled = false;
+        checkoutSubmit.innerText = 'Settle Bill';
+      }
     });
 
     // INTEGRATED SINGLE ROUTINE: Intercepts clicks on Master Patient view-pres-btn list elements

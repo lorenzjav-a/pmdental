@@ -10,6 +10,13 @@ if (!isset($_SESSION['admin_id'])) {
 $db = new database();
 $msg = $msgType = '';
 
+// Simple polling endpoint to return current count of confirmed appointments
+if (isset($_GET['confirmed_count'])) {
+    header('Content-Type: application/json');
+    echo json_encode(['count' => $db->countAppointments('Confirmed')]);
+    exit();
+}
+
 // Intercept asynchronous AJAX inquiries for patient intake history data profiles cleanly
 if (isset($_GET['fetch_patient_details']) && isset($_GET['patient_id'])) {
     header('Content-Type: application/json');
@@ -590,6 +597,26 @@ $pendingRequests = $db->countAppointments('Pending');
 
         installTableSearch('caseQueueSearch', 'caseQueueTable');
     </script>
+        <script src="../sweetalert/dist/sweetalert2.js"></script>
+        <script>
+            // Poll for new confirmed appointments and notify admin when count increases
+            (function(){
+                var lastCount = null;
+                function poll() {
+                    fetch('admin-dashboard.php?confirmed_count=1')
+                        .then(r => r.json())
+                        .then(data => {
+                            if (lastCount === null) { lastCount = data.count; return; }
+                            if (data.count > lastCount) {
+                                Swal.fire({ icon: 'info', title: 'New Confirmed Appointment', text: 'One or more appointments were just confirmed by staff.' });
+                            }
+                            lastCount = data.count;
+                        }).catch(()=>{});
+                }
+                poll();
+                setInterval(poll, 15000);
+            })();
+        </script>
 </body>
 
 </html>

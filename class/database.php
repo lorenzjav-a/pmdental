@@ -5,7 +5,7 @@ class database
     function opencon(): PDO
     {
         return new PDO(
-            'mysql:host=localhost; dbname=dentist',
+            'mysql:host=localhost; dbname=dentista',
             username: 'root',
             password: ''
         );
@@ -132,6 +132,15 @@ class database
                 $patient_id = $con->lastInsertId();
             }
 
+            // Normalize datetime-local (e.g. 2026-05-30T13:30) to MySQL DATETIME (YYYY-MM-DD HH:MM:SS)
+            if (strpos($appointment_date, 'T') !== false) {
+                $appointment_date = str_replace('T', ' ', $appointment_date);
+            }
+            // ensure seconds
+            if (preg_match('/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}$/', $appointment_date)) {
+                $appointment_date .= ':00';
+            }
+
             $stmt_app = $con->prepare("INSERT INTO appointment (Patient_ID, Employee_ID, Dentist_ID, Appointment_Date, Appointment_Status) VALUES (?, NULL, NULL, ?, 'Pending')");
             $stmt_app->execute([$patient_id, $appointment_date]);
             $appointment_id = $con->lastInsertId();
@@ -157,6 +166,9 @@ class database
                     a.Appointment_ID, 
                     a.Appointment_Date, 
                     a.Appointment_Status, 
+                                        pmt.Payment_Amount,
+                                        pmt.Payment_Method,
+                                        pmt.Payment_Status AS Payment_Status,
                     p.Patient_ID,
                     p.Patient_FN, 
                     p.Patient_LN,
@@ -165,12 +177,14 @@ class database
                     p.Patient_PhoneNo,
                     d.Dentist_FN, 
                     d.Dentist_LN,
-                    s.Service_Name
+                    s.Service_Name,
+                    s.Service_Fee
                   FROM appointment a
                   LEFT JOIN patient p ON a.Patient_ID = p.Patient_ID
                   LEFT JOIN dentist d ON a.Dentist_ID = d.Dentist_ID
                   LEFT JOIN appointment_service asv ON a.Appointment_ID = asv.Appointment_ID
                   LEFT JOIN service s ON asv.Service_ID = s.Service_ID
+                                    LEFT JOIN payment pmt ON a.Appointment_ID = pmt.Appointment_ID
                   ORDER BY a.Appointment_Date DESC";
         
         $stmt = $con->prepare($query);
@@ -397,6 +411,8 @@ function getPatientPrescriptions($patient_id)
     {
         $con = $this->opencon();
         try {
+            $con->beginTransaction();
+
             // First, check if a payment tracker already exists for this appointment
             $stmt_check = $con->prepare("SELECT Payment_ID FROM payment WHERE Appointment_ID = ? LIMIT 1");
             $stmt_check->execute([$appointment_id]);
@@ -408,7 +424,7 @@ function getPatientPrescriptions($patient_id)
                           SET Payment_Method = ?, Payment_Status = ?, Payment_Date = CURDATE() 
                           WHERE Appointment_ID = ?";
                 $stmt = $con->prepare($query);
-                return $stmt->execute([$payment_method, $payment_status, $appointment_id]);
+                $res = $stmt->execute([$payment_method, $payment_status, $appointment_id]);
             } else {
                 // If it doesn't exist, calculate the fee baseline via service_cost or service table
                 $stmt_fee = $con->prepare("SELECT s.Service_Fee 
@@ -423,9 +439,19 @@ function getPatientPrescriptions($patient_id)
                 $query = "INSERT INTO payment (Appointment_ID, Payment_Amount, Payment_Method, Payment_Status, Payment_Date) 
                           VALUES (?, ?, ?, ?, CURDATE())";
                 $stmt = $con->prepare($query);
-                return $stmt->execute([$appointment_id, $amount, $payment_method, $payment_status]);
+                $res = $stmt->execute([$appointment_id, $amount, $payment_method, $payment_status]);
             }
+
+            // If the payment is marked Paid, mark appointment as Completed
+            if (strtolower($payment_status) === 'paid') {
+                $stmt_upd = $con->prepare("UPDATE appointment SET Appointment_Status = 'Completed' WHERE Appointment_ID = ?");
+                $stmt_upd->execute([$appointment_id]);
+            }
+
+            $con->commit();
+            return $res ?? true;
         } catch (PDOException $e) {
+            if ($con->inTransaction()) $con->rollBack();
             throw new Exception("Failed to execute terminal payment checkout: " . $e->getMessage());
         }
     }
@@ -531,6 +557,103 @@ function getPatientPrescriptions($patient_id)
                 $con->rollBack();
             }
             throw new Exception("Failed to process prescription logging: " . $e->getMessage());
+        }
+    }
+
+    function getActiveDentistFee($appointment_id)
+    {
+        $con = $this->opencon();
+        try {
+            $stmt = $con->prepare("SELECT s.Service_Fee 
+                                   FROM appointment_service asv 
+                                   INNER JOIN service s ON asv.Service_ID = s.Service_ID 
+                                   WHERE asv.Appointment_ID = ? LIMIT 1");
+            $stmt->execute([$appointment_id]);
+            $service = $stmt->fetch(PDO::FETCH_ASSOC);
+            return $service ? $service['Service_Fee'] : 0.00;
+        } catch (PDOException $e) {
+            return 0.00;
+        }
+    }
+
+    /**
+     * Check whether a requested appointment datetime is already taken.
+     * Returns true if there exists an appointment within +/-30 minutes of the requested datetime.
+     */
+    function isSlotTaken($appointment_datetime)
+    {
+        $con = $this->opencon();
+        try {
+            $stmt = $con->prepare("SELECT Appointment_ID, Appointment_Date FROM appointment 
+                                   WHERE ABS(TIMESTAMPDIFF(MINUTE, Appointment_Date, ?)) < 30 LIMIT 1");
+            $stmt->execute([$appointment_datetime]);
+            $row = $stmt->fetch(PDO::FETCH_ASSOC);
+            return $row ? true : false;
+        } catch (PDOException $e) {
+            return false;
+        }
+    }
+
+    /**
+     * Save a quick payment when no appointment exists yet.
+     * Creates a patient (if not found by exact name), creates a confirmed appointment, and logs payment.
+     */
+    function savePayment($patient_name, $dentist_id, $amount, $appointment_date = null)
+    {
+        $con = $this->opencon();
+        try {
+            $con->beginTransaction();
+
+            // split name
+            $parts = preg_split('/\s+/', trim($patient_name), 2);
+            $fn = $parts[0] ?? 'Patient';
+            $ln = $parts[1] ?? 'Unknown';
+
+            // try to find exact patient by name
+            $stmt_find = $con->prepare("SELECT Patient_ID FROM patient WHERE Patient_FN = ? AND Patient_LN = ? LIMIT 1");
+            $stmt_find->execute([$fn, $ln]);
+            $row = $stmt_find->fetch(PDO::FETCH_ASSOC);
+
+            if ($row) {
+                $patient_id = $row['Patient_ID'];
+            } else {
+                $stmt_ins = $con->prepare("INSERT INTO patient (Patient_FN, Patient_LN, Patient_PhoneNo, Patient_BirthDate, Patient_Gender) VALUES (?, ?, ?, ?, ?)");
+                $stmt_ins->execute([$fn, $ln, '', NULL, 'unspecified']);
+                $patient_id = $con->lastInsertId();
+            }
+
+            // Prefer to link payment to an existing pending appointment (preserve its date)
+            $stmt_pending = $con->prepare("SELECT Appointment_ID, Appointment_Date FROM appointment WHERE Patient_ID = ? AND Appointment_Status = 'Pending' ORDER BY Appointment_Date ASC LIMIT 1");
+            $stmt_pending->execute([$patient_id]);
+            $pending = $stmt_pending->fetch(PDO::FETCH_ASSOC);
+
+            if ($pending) {
+                $appointment_id = $pending['Appointment_ID'];
+                $stmt_upd = $con->prepare("UPDATE appointment SET Dentist_ID = ?, Appointment_Status = 'Confirmed' WHERE Appointment_ID = ?");
+                $stmt_upd->execute([$dentist_id, $appointment_id]);
+            } else {
+                // If no pending appointment exists, create a confirmed appointment only when a date is provided.
+                if ($appointment_date) {
+                    if (strpos($appointment_date, 'T') !== false) $appointment_date = str_replace('T', ' ', $appointment_date);
+                    if (preg_match('/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}$/', $appointment_date)) $appointment_date .= ':00';
+                    $stmt_app = $con->prepare("INSERT INTO appointment (Patient_ID, Employee_ID, Dentist_ID, Appointment_Date, Appointment_Status) VALUES (?, NULL, ?, ?, 'Confirmed')");
+                    $stmt_app->execute([$patient_id, $dentist_id, $appointment_date]);
+                } else {
+                    $stmt_app = $con->prepare("INSERT INTO appointment (Patient_ID, Employee_ID, Dentist_ID, Appointment_Date, Appointment_Status) VALUES (?, NULL, ?, NULL, 'Confirmed')");
+                    $stmt_app->execute([$patient_id, $dentist_id]);
+                }
+                $appointment_id = $con->lastInsertId();
+            }
+
+            // Log payment
+            $stmt_pay = $con->prepare("INSERT INTO payment (Appointment_ID, Payment_Amount, Payment_Method, Payment_Status, Payment_Date) VALUES (?, ?, ?, ?, CURDATE())");
+            $stmt_pay->execute([$appointment_id, $amount, 'Cash', 'Paid']);
+
+            $con->commit();
+            return true;
+        } catch (PDOException $e) {
+            if ($con->inTransaction()) $con->rollBack();
+            throw new Exception('Failed to save payment: ' . $e->getMessage());
         }
     }
 }

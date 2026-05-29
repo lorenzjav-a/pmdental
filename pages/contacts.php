@@ -34,6 +34,14 @@ if (isset($_POST['submit_request'])) {
         $dbMessage = "Database injection dropped: " . $e->getMessage();
     }
 }
+
+// AJAX slot check (returns JSON)
+if (isset($_GET['check_slot']) && isset($_GET['appointment_date'])) {
+    header('Content-Type: application/json');
+    $taken = $con->isSlotTaken($_GET['appointment_date']);
+    echo json_encode(['taken' => $taken]);
+    exit();
+}
 ?>
 
 <div class="container py-5">
@@ -120,3 +128,40 @@ if (isset($_POST['submit_request'])) {
 </div>
 
 <?php include 'footer.php'; ?> 
+
+<script src="/sweetalert/dist/sweetalert2.js"></script>
+<script>
+document.querySelector('form').addEventListener('submit', function (e) {
+    e.preventDefault();
+    const form = this;
+    const dt = form.querySelector('input[name="appointment_date"]').value;
+    if (!dt) return form.submit();
+
+    fetch('contacts.php?check_slot=1&appointment_date=' + encodeURIComponent(dt))
+        .then(r => r.json())
+        .then(res => {
+            if (res.taken) {
+                Swal.fire({ icon: 'error', title: 'Slot Taken', text: 'The selected time is already taken. Please choose another time.' });
+                return;
+            }
+            // ensure submit button flag is present for PHP to detect
+            if (!form.querySelector('input[name="submit_request"]')) {
+                const hid = document.createElement('input'); hid.type = 'hidden'; hid.name = 'submit_request'; hid.value = '1'; form.appendChild(hid);
+            }
+            form.submit();
+        }).catch(() => {
+            // on failure, still submit but warn; ensure submit flag present
+            if (!form.querySelector('input[name="submit_request"]')) {
+                const hid = document.createElement('input'); hid.type = 'hidden'; hid.name = 'submit_request'; hid.value = '1'; form.appendChild(hid);
+            }
+            form.submit();
+        });
+});
+
+// Show server-side status via SweetAlert when present
+<?php if (!empty($dbStatus) && $dbStatus == 'success'): ?>
+Swal.fire({ icon: 'success', title: 'Request Sent', text: <?= json_encode($dbMessage) ?> });
+<?php elseif (!empty($dbStatus) && $dbStatus == 'error'): ?>
+Swal.fire({ icon: 'error', title: 'Error', text: <?= json_encode($dbMessage) ?> });
+<?php endif; ?>
+</script>
