@@ -27,16 +27,16 @@ $allDentists = $con->viewDentists();
     #employeeSidebar .sidebar-links { padding: 0 1.2rem; }
     #employeeSidebar .sidebar-links a { display: block; color: #d6d6d6; padding: 0.9rem 0.75rem; text-decoration: none; border-radius: 0.65rem; margin-bottom: 0.35rem; transition: background 0.2s, color 0.2s; }
     #employeeSidebar .sidebar-links a.active, #employeeSidebar .sidebar-links a:hover { background: #1b263b; color: #fff; }
-    nav.navbar { margin-left: 260px; transition: margin-left 0.2s ease; }
-    #pageMain { margin-left: 260px; padding-top: 1.5rem; padding-bottom: 3rem; }
+    nav.navbar { margin-left: 260px; transition: margin-left 0.2s ease; width: calc(100% - 260px); padding-left: 1rem; padding-right: 1rem; }
+    #pageMain { margin-left: 260px; padding-top: 1.5rem; padding-bottom: 3rem; padding-left: 1.5rem; padding-right: 1.5rem; width: calc(100% - 260px); max-width: 100%; }
     #dentistCalendar { background: #ffffff; border-radius: 12px; padding: 18px; box-shadow: 0 10px 25px rgba(15, 23, 42, 0.06); }
-    @media (max-width: 992px) { #employeeSidebar { position: relative; height: auto; width: 100%; } nav.navbar, #pageMain { margin-left: 0; } }
+    @media (max-width: 992px) { #employeeSidebar { position: relative; height: auto; width: 100%; } nav.navbar { margin-left: 0; width: 100%; } #pageMain { margin-left: 0; width: 100%; } }
   </style>
 </head>
 <body>
   <?php include 'employee-sidebar.php'; ?>
   <nav class="navbar navbar-expand-lg bg-white border-bottom sticky-top">
-    <div class="container">
+    <div class="container-fluid px-4">
       <a class="navbar-brand fw-semibold" href="employee-dashboard.php">PM Dental Staff</a>
       <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navStatic">
         <span class="navbar-toggler-icon"></span>
@@ -52,7 +52,7 @@ $allDentists = $con->viewDentists();
       </div>
     </div>
   </nav>
-  <main id="pageMain" class="container py-4">
+  <main id="pageMain" class="container-fluid py-4">
     <div class="row g-4">
       <div class="col-12">
         <div class="card p-4 shadow-sm border-0 bg-white">
@@ -81,7 +81,21 @@ $allDentists = $con->viewDentists();
     const cal = new FullCalendar.Calendar(document.getElementById('dentistCalendar'), {
       initialView: 'dayGridMonth',
       height: 600,
-      events: []
+      headerToolbar: {
+        left: 'prev,next today',
+        center: 'title',
+        right: 'dayGridMonth,timeGridWeek,timeGridDay'
+      },
+      events: [],
+      eventDisplay: 'block',
+      eventMinHeight: 50,
+      eventTimeFormat: {
+        hour: 'numeric',
+        minute: '2-digit',
+        meridiem: 'short'
+      },
+      displayEventTime: true,
+      eventMaxStack: 3
     });
     cal.render();
 

@@ -63,15 +63,15 @@ if (isset($_POST['execute_checkout'])) {
     #employeeSidebar .sidebar-links { padding: 0 1.2rem; }
     #employeeSidebar .sidebar-links a { display: block; color: #d6d6d6; padding: 0.9rem 0.75rem; text-decoration: none; border-radius: 0.65rem; margin-bottom: 0.35rem; transition: background 0.2s, color 0.2s; }
     #employeeSidebar .sidebar-links a.active, #employeeSidebar .sidebar-links a:hover { background: #1b263b; color: #fff; }
-    nav.navbar { margin-left: 260px; transition: margin-left 0.2s ease; }
-    #pageMain { margin-left: 260px; padding-top: 1.5rem; padding-bottom: 3rem; }
-    @media (max-width: 992px) { #employeeSidebar { position: relative; height: auto; width: 100%; } nav.navbar, #pageMain { margin-left: 0; } }
+    nav.navbar { margin-left: 260px; transition: margin-left 0.2s ease; width: calc(100% - 260px); padding-left: 1rem; padding-right: 1rem; }
+    #pageMain { margin-left: 260px; padding-top: 1.5rem; padding-bottom: 3rem; padding-left: 1.5rem; padding-right: 1.5rem; width: calc(100% - 260px); max-width: 100%; }
+    @media (max-width: 992px) { #employeeSidebar { position: relative; height: auto; width: 100%; } nav.navbar { margin-left: 0; width: 100%; } #pageMain { margin-left: 0; width: 100%; } }
   </style>
 </head>
 <body>
   <?php include 'employee-sidebar.php'; ?>
   <nav class="navbar navbar-expand-lg bg-white border-bottom sticky-top">
-    <div class="container">
+    <div class="container-fluid px-4">
       <a class="navbar-brand fw-semibold" href="employee-dashboard.php">PM Dental Staff</a>
       <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navStatic">
         <span class="navbar-toggler-icon"></span>
@@ -87,7 +87,7 @@ if (isset($_POST['execute_checkout'])) {
       </div>
     </div>
   </nav>
-  <main id="pageMain" class="container py-4">
+  <main id="pageMain" class="container-fluid py-4">
     <div class="row g-4 mb-4">
       <div class="col-12">
         <div class="card p-4 shadow-sm border-0 bg-white">
@@ -139,7 +139,11 @@ if (isset($_POST['execute_checkout'])) {
                         <?php else: ?>
                           <button class="btn btn-sm btn-outline-secondary px-2" disabled><?= $appointmentStatus === 'completed' ? 'Completed' : 'Assigned'; ?></button>
                         <?php endif; ?>
-                        <button type="button" class="<?= $checkoutButtonClass; ?>" <?= $checkoutDisabled ? 'disabled' : ''; ?> data-bs-toggle="modal" data-bs-target="#checkoutModal" data-app-id="<?= $app['Appointment_ID']; ?>" data-patient-name="<?= $fullName; ?>" data-service="<?= htmlspecialchars($serviceName); ?>" data-amount="<?= ($app['Payment_Amount'] ?? $app['Service_Fee'] ?? 0); ?>" data-method="<?= htmlspecialchars($app['Payment_Method'] ?? 'Cash'); ?>" data-payment-status="<?= htmlspecialchars($app['Payment_Status'] ?? 'Pending'); ?>" data-app-status="<?= htmlspecialchars($app['Appointment_Status'] ?? 'Pending'); ?>"><?= $checkoutButtonLabel; ?></button>
+                        <?php if ($checkoutDisabled): ?>
+                          <button type="button" class="btn btn-sm btn-success px-2 disabled" disabled>Settled</button>
+                        <?php else: ?>
+                          <button type="button" class="btn btn-sm btn-success px-2" data-bs-toggle="modal" data-bs-target="#checkoutModal" data-app-id="<?= $app['Appointment_ID']; ?>" data-patient-name="<?= $fullName; ?>" data-service="<?= htmlspecialchars($serviceName); ?>" data-amount="<?= ($app['Payment_Amount'] ?? $app['Service_Fee'] ?? 0); ?>" data-method="<?= htmlspecialchars($app['Payment_Method'] ?? 'Cash'); ?>" data-payment-status="<?= htmlspecialchars($app['Payment_Status'] ?? 'Pending'); ?>" data-app-status="<?= htmlspecialchars($app['Appointment_Status'] ?? 'Pending'); ?>">Checkout</button>
+                        <?php endif; ?>
                       </td>
                     </tr>
                   <?php endforeach; ?>
@@ -224,6 +228,10 @@ if (isset($_POST['execute_checkout'])) {
               </select>
             </div>
           </div>
+          <div class="mb-3">
+            <span class="text-muted small d-block">Appointment Status</span>
+            <strong id="checkout_app_status" class="d-block"></strong>
+          </div>
           <div class="row g-2">
             <div class="col-6"><button type="button" class="btn btn-light w-100" data-bs-dismiss="modal">Cancel</button></div>
             <div class="col-6"><button type="submit" name="execute_checkout" class="btn btn-success w-100">Settle Bill</button></div>
@@ -264,13 +272,21 @@ if (isset($_POST['execute_checkout'])) {
       document.getElementById('checkout_amount').value = btn.getAttribute('data-amount') || '0.00';
       document.getElementById('checkout_method').value = btn.getAttribute('data-method') || 'Cash';
       document.getElementById('checkout_status').value = btn.getAttribute('data-payment-status') || 'Pending';
+      const appStatusLabel = document.getElementById('checkout_app_status');
+      const displayStatus = appStatus === 'completed' ? 'Completed' : (appStatus === 'confirmed' ? 'Confirmed' : 'Pending');
+      appStatusLabel.innerText = displayStatus;
+      appStatusLabel.className = displayStatus === 'Completed' ? 'text-success fw-bold' : (displayStatus === 'Confirmed' ? 'text-primary fw-bold' : 'text-warning fw-bold');
 
       if (paymentStatus === 'paid' || appStatus === 'completed') {
         checkoutSubmit.disabled = true;
-        checkoutSubmit.innerText = 'Already Settled';
+        checkoutSubmit.innerText = 'Already Completed';
+        document.getElementById('checkout_method').disabled = true;
+        document.getElementById('checkout_status').disabled = true;
       } else {
         checkoutSubmit.disabled = false;
         checkoutSubmit.innerText = 'Settle Bill';
+        document.getElementById('checkout_method').disabled = false;
+        document.getElementById('checkout_status').disabled = false;
       }
     });
 
@@ -313,7 +329,7 @@ if (isset($_POST['execute_checkout'])) {
     const assignMsgStatus = <?php echo json_encode($assignStatus); ?>;
     const assignMsgText = <?php echo json_encode($assignMessage); ?>;
 
-    if (alertMsgStatus === 'success') Swal.fire({ icon: 'success', title: 'Confirmed', text: alertMsgText });
+    if (alertMsgStatus === 'success') Swal.fire({ icon: 'success', title: 'Success', text: alertMsgText });
     else if (alertMsgStatus === 'error') Swal.fire({ icon: 'error', title: 'Action Failed', text: alertMsgText });
     if (assignMsgStatus === 'success') Swal.fire({ icon: 'success', title: 'Assigned', text: assignMsgText });
     else if (assignMsgStatus === 'error') Swal.fire({ icon: 'error', title: 'Assignment Failed', text: assignMsgText });

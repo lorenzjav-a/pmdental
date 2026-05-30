@@ -20,28 +20,37 @@ if (isset($_POST['submit_request'])) {
     $appointment_date = $_POST['appointment_date'];
     $service_id       = $_POST['service_id'];
 
+    // Normalize the datetime-local value for MySQL DATETIME storage
+    $appointment_datetime = date('Y-m-d H:i:s', strtotime(str_replace('T', ' ', $appointment_date)));
+
     try {
-    
-        $con->createAppointmentRequest($fullname, $email, $phone, $birthday, $gender, $appointment_date, $service_id);
-        
+        $con->createAppointmentRequest(
+            $fullname,
+            $email,
+            $phone,
+            $birthday,
+            $gender,
+            $appointment_datetime,
+            $service_id
+        );
+
         $showData = true;
         $dbStatus = "success";
         $dbMessage = "Your booking request has been forwarded to our desk successfully.";
-      
+
         header("refresh:10;url=index.php");
-    } catch (Exception $e) {
+
+    } catch (PDOException $e) {
+
         $dbStatus = "error";
-        $dbMessage = "Database injection dropped: " . $e->getMessage();
+        $dbMessage = "Invalid service selected. Please try again.";
+
+        // For debugging:
+        // echo $e->getMessage();
     }
+
 }
 
-// AJAX slot check (returns JSON)
-if (isset($_GET['check_slot']) && isset($_GET['appointment_date'])) {
-    header('Content-Type: application/json');
-    $taken = $con->isSlotTaken($_GET['appointment_date']);
-    echo json_encode(['taken' => $taken]);
-    exit();
-}
 ?>
 
 <div class="container py-5">
@@ -127,41 +136,39 @@ if (isset($_GET['check_slot']) && isset($_GET['appointment_date'])) {
     </div>
 </div>
 
+<?php if ($dbStatus == "taken"): ?>
+<script>
+Swal.fire({
+    icon: 'error',
+    title: 'Slot Already Taken',
+    text: 'This schedule is already booked. Please choose another time.',
+    confirmButtonColor: '#d33'
+});
+</script>
+<?php endif; ?>
+
+
+<?php if ($dbStatus == "success"): ?>
+<script>
+Swal.fire({
+    icon: 'success',
+    title: 'Request Submitted',
+    text: 'Your appointment has been successfully sent.',
+    confirmButtonColor: '#198754'
+});
+</script>
+<?php endif; ?>
+
+
+<?php if ($dbStatus == "error"): ?>
+<script>
+Swal.fire({
+    icon: 'error',
+    title: 'System Error',
+    text: 'Something went wrong. Please try again.',
+});
+</script>
+<?php endif; ?>
+
 <?php include 'footer.php'; ?> 
 
-<script src="/sweetalert/dist/sweetalert2.js"></script>
-<script>
-document.querySelector('form').addEventListener('submit', function (e) {
-    e.preventDefault();
-    const form = this;
-    const dt = form.querySelector('input[name="appointment_date"]').value;
-    if (!dt) return form.submit();
-
-    fetch('contacts.php?check_slot=1&appointment_date=' + encodeURIComponent(dt))
-        .then(r => r.json())
-        .then(res => {
-            if (res.taken) {
-                Swal.fire({ icon: 'error', title: 'Slot Taken', text: 'The selected time is already taken. Please choose another time.' });
-                return;
-            }
-            // ensure submit button flag is present for PHP to detect
-            if (!form.querySelector('input[name="submit_request"]')) {
-                const hid = document.createElement('input'); hid.type = 'hidden'; hid.name = 'submit_request'; hid.value = '1'; form.appendChild(hid);
-            }
-            form.submit();
-        }).catch(() => {
-            // on failure, still submit but warn; ensure submit flag present
-            if (!form.querySelector('input[name="submit_request"]')) {
-                const hid = document.createElement('input'); hid.type = 'hidden'; hid.name = 'submit_request'; hid.value = '1'; form.appendChild(hid);
-            }
-            form.submit();
-        });
-});
-
-// Show server-side status via SweetAlert when present
-<?php if (!empty($dbStatus) && $dbStatus == 'success'): ?>
-Swal.fire({ icon: 'success', title: 'Request Sent', text: <?= json_encode($dbMessage) ?> });
-<?php elseif (!empty($dbStatus) && $dbStatus == 'error'): ?>
-Swal.fire({ icon: 'error', title: 'Error', text: <?= json_encode($dbMessage) ?> });
-<?php endif; ?>
-</script>

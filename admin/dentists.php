@@ -11,6 +11,7 @@ if (!isset($_SESSION['admin_id'])) {
 $admin_name = $_SESSION['admin_name'] ?? 'Administrator';
 $activePage = 'dentists';
 $dentists = $db->viewDentists();
+
 ?>
 <!DOCTYPE html>
 <html lang="en">

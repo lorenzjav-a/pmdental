@@ -1,11 +1,17 @@
 <?php
-$activePage = $activePage ?? '';
-function sidebarActive($page)
-{
-    global $activePage;
-    return $activePage === $page ? 'active' : '';
+if (!isset($activePage)) {
+    $activePage = '';
+}
+
+if (!function_exists('sidebarActive')) {
+    function sidebarActive($page)
+    {
+        global $activePage;
+        return ($activePage === $page) ? 'active' : '';
+    }
 }
 ?>
+
 <div class="sidebar">
     <h2>PM Dental</h2>
 
