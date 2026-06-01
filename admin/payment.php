@@ -22,7 +22,7 @@ if (isset($_POST['save_fee'])) {
     }
 }
 
-/* AJAX fee request */
+
 if (isset($_GET['get_fee'])) {
 
     $fee = $db->getActiveDentistFee($_GET['dentist_id']);
@@ -30,7 +30,6 @@ if (isset($_GET['get_fee'])) {
     exit();
 }
 
-/* Save payment */
 if (isset($_POST['pay'])) {
 
     $patient_name = trim($_POST['patient_name']);

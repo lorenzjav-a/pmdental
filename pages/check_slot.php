@@ -18,7 +18,7 @@ if (empty($dentist_id) || empty($date) || empty($time)) {
 try {
     // Call the check function from our database class wrapper instance
     $isTaken = $db->isSlotTaken($dentist_id, $date, $time);
-    
+
     // Output json back to SweetAlert fetch statement
     echo json_encode(['taken' => $isTaken]);
 } catch (Exception $e) {

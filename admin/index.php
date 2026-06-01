@@ -201,7 +201,7 @@ if (isset($_POST["btnRegister"])) {
             });
         }
     </script>
-    
+
 </body>
 
 </html>

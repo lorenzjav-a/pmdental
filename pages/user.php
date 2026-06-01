@@ -44,7 +44,6 @@ if (isset($_POST["btnRegister"])) {
                         $password_hash,
                         $role
                     );
-
                 } else {
 
                     $id = $db->insertDentist(
@@ -59,7 +58,6 @@ if (isset($_POST["btnRegister"])) {
                 $successMessage = "Registration successful! Password: <b>$password_plain</b>";
 
                 $first_name = $last_name = $email = $account_type = "";
-
             } catch (Exception $e) {
 
                 $successMessage = "Error: " . $e->getMessage();
@@ -67,4 +65,3 @@ if (isset($_POST["btnRegister"])) {
         }
     }
 }
-?>

@@ -78,7 +78,7 @@ class database
             if ($user && $passwords == $user['passwords']) {
                 $fullName = trim(
                     ($user['Employee_FN'] ?? $user['Dentist_FN'] ?? '') . ' ' .
-                    ($user['Employee_LN'] ?? $user['Dentist_LN'] ?? '')
+                        ($user['Employee_LN'] ?? $user['Dentist_LN'] ?? '')
                 );
 
                 return [
@@ -140,11 +140,12 @@ class database
         }
     }
 
-    function viewAppointments() {
-    $con = $this->opencon();
-    try {
-        // Updated to include the service bridge table and service masterlist table
-        $query = "SELECT 
+    function viewAppointments()
+    {
+        $con = $this->opencon();
+        try {
+            // Updated to include the service bridge table and service masterlist table
+            $query = "SELECT 
                     a.Appointment_ID, 
                     a.Appointment_Date, 
                     a.Appointment_Status,
@@ -169,14 +170,14 @@ class database
                   LEFT JOIN service s ON asv.Service_ID = s.Service_ID
                   LEFT JOIN payment pay ON a.Appointment_ID = pay.Appointment_ID
                   ORDER BY a.Appointment_Date DESC";
-        
-        $stmt = $con->prepare($query);
-        $stmt->execute();
-        return $stmt->fetchAll(PDO::FETCH_ASSOC);
-    } catch (PDOException $e) {
-        return [];
+
+            $stmt = $con->prepare($query);
+            $stmt->execute();
+            return $stmt->fetchAll(PDO::FETCH_ASSOC);
+        } catch (PDOException $e) {
+            return [];
+        }
     }
-}
 
     function viewDentists()
     {
@@ -316,7 +317,7 @@ class database
         $stmt2->execute([$dentist_id, $appointment_id, $target['Appointment_Date']]);
         return $stmt2->fetch() ?: false;
     }
-    
+
     function assignDentistToAppointment($appointment_id, $employee_id, $dentist_id)
     {
         $conflict = $this->checkScheduleConflict($dentist_id, $appointment_id);
@@ -348,7 +349,7 @@ class database
         $stmt->execute([$dentist_id]);
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
-function getPatientPrescriptions($patient_id)
+    function getPatientPrescriptions($patient_id)
     {
         $con = $this->opencon();
         try {
@@ -452,8 +453,9 @@ function getPatientPrescriptions($patient_id)
         }
     }
 
-   
-  function getPatientWithMedicalHistory($patient_id) {
+
+    function getPatientWithMedicalHistory($patient_id)
+    {
         $con = $this->opencon();
         try {
             // Fetch patient core info
@@ -477,7 +479,8 @@ function getPatientPrescriptions($patient_id)
     /**
      * EMPLOYEE SIDE USE: Fetches prescription items logged by the Dentist
      */
-    function getPrescriptionItemsByAppointment($appointment_id) {
+    function getPrescriptionItemsByAppointment($appointment_id)
+    {
         $con = $this->opencon();
         try {
             // Joins prescription items back to prescription using your table maps
@@ -491,28 +494,26 @@ function getPatientPrescriptions($patient_id)
             return [];
         }
     }
-    function getPrescriptionItemsByPatient($patient_id) {
-    $con = $this->opencon();
-    try {
-        $query = "SELECT pi.Item_Name, pi.Item_Quantity, pi.Pres_Dosage 
+    function getPrescriptionItemsByPatient($patient_id)
+    {
+        $con = $this->opencon();
+        try {
+            $query = "SELECT pi.Item_Name, pi.Item_Quantity, pi.Pres_Dosage 
                   FROM prescription_items pi
                   JOIN prescription pr ON pi.Prescription_ID = pr.Prescription_ID
                   JOIN appointment a ON pr.Appointment_ID = a.Appointment_ID
                   WHERE a.Patient_ID = :patient_id";
-        
-        $stmt = $con->prepare($query);
-        $stmt->bindParam(':patient_id', $patient_id, PDO::PARAM_INT);
-        $stmt->execute();
-        return $stmt->fetchAll(PDO::FETCH_ASSOC);
-    } catch (PDOException $e) {
-        return [];
-    }
-}
 
-    /**
-     * NEW METHOD: Adds a prescription record and loops through items using transactional queries.
-     * Expects $items to be an array of arrays, e.g., [['name' => 'Amoxicillin', 'qty' => 10, 'dosage' => '500mg']]
-     */
+            $stmt = $con->prepare($query);
+            $stmt->bindParam(':patient_id', $patient_id, PDO::PARAM_INT);
+            $stmt->execute();
+            return $stmt->fetchAll(PDO::FETCH_ASSOC);
+        } catch (PDOException $e) {
+            return [];
+        }
+    }
+
+    // This function allows dentists to log prescriptions with multiple items for a given appointment
     function addPrescriptionWithItems($appointment_id, $items)
     {
         $con = $this->opencon();
@@ -526,7 +527,7 @@ function getPatientPrescriptions($patient_id)
 
             // 2. Insert individual items matching your structural schema rules
             $stmt_item = $con->prepare("INSERT INTO prescription_items (Prescription_ID, Item_Name, Item_Quantity, Pres_Dosage) VALUES (?, ?, ?, ?)");
-            
+
             foreach ($items as $item) {
                 $stmt_item->execute([
                     $prescription_id,
@@ -546,39 +547,39 @@ function getPatientPrescriptions($patient_id)
         }
     }
 
-    function isSlotTaken($appointment_date, $appointment_time) {
+    function isSlotTaken($appointment_date, $appointment_time)
+    {
 
-    $con = $this->opencon();
+        $con = $this->opencon();
 
-    try {
+        try {
 
-        $stmt = $con->prepare("SELECT COUNT(*) 
+            $stmt = $con->prepare("SELECT COUNT(*) 
             FROM appointments
             WHERE appointment_date = ?
             AND appointment_time = ?
         ");
 
-        $stmt->execute([
-            $appointment_date,
-            $appointment_time
-        ]);
+            $stmt->execute([
+                $appointment_date,
+                $appointment_time
+            ]);
 
-        $count = $stmt->fetchColumn();
+            $count = $stmt->fetchColumn();
 
-        return $count > 0;
-
-    } catch (PDOException $e) {
-        return false;
+            return $count > 0;
+        } catch (PDOException $e) {
+            return false;
+        }
     }
-}
 
-function getActiveDentistFee($dentist_id)
-{
-    $con = $this->opencon();
+    function getActiveDentistFee($dentist_id)
+    {
+        $con = $this->opencon();
 
-    try {
+        try {
 
-        $stmt = $con->prepare("SELECT rates
+            $stmt = $con->prepare("SELECT rates
             FROM dentist_consul_fee
             WHERE dentist_id = ?
             AND CURDATE() BETWEEN valid_from AND valid_to
@@ -586,72 +587,69 @@ function getActiveDentistFee($dentist_id)
             LIMIT 1
         ");
 
-        $stmt->execute([$dentist_id]);
+            $stmt->execute([$dentist_id]);
 
-        $result = $stmt->fetch(PDO::FETCH_ASSOC);
+            $result = $stmt->fetch(PDO::FETCH_ASSOC);
 
-        return $result['rates'] ?? 0;
-
-    } catch (PDOException $e) {
-        return 0;
+            return $result['rates'] ?? 0;
+        } catch (PDOException $e) {
+            return 0;
+        }
     }
-}
 
-function savePayment($patient_name, $dentist_id, $amount)
-{
-    $con = $this->opencon();
+    function savePayment($patient_name, $dentist_id, $amount)
+    {
+        $con = $this->opencon();
 
-    try {
+        try {
 
-        $stmt = $con->prepare("INSERT INTO payment (patient_name, dentist_id, payment_amount)
+            $stmt = $con->prepare("INSERT INTO payment (patient_name, dentist_id, payment_amount)
             VALUES (?, ?, ?)
         ");
 
-        return $stmt->execute([
-            $patient_name,
-            $dentist_id,
-            $amount
-        ]);
-
-    } catch (PDOException $e) {
-        return false;
+            return $stmt->execute([
+                $patient_name,
+                $dentist_id,
+                $amount
+            ]);
+        } catch (PDOException $e) {
+            return false;
+        }
     }
-}
 
-function updateDentistFee($dentist_id, $rates, $valid_from, $valid_to)
-{
-    $con = $this->opencon();
+    function updateDentistFee($dentist_id, $rates, $valid_from, $valid_to)
+    {
+        $con = $this->opencon();
 
-    $sql = "UPDATE dentist_consul_fee 
+        $sql = "UPDATE dentist_consul_fee 
             SET rates = ?, valid_from = ?, valid_to = ?
             WHERE dentist_id = ?";
 
-    $stmt = $con->prepare($sql);
+        $stmt = $con->prepare($sql);
 
-    return $stmt->execute([
-        $rates,
-        $valid_from,
-        $valid_to,
-        $dentist_id
-    ]);
-}
+        return $stmt->execute([
+            $rates,
+            $valid_from,
+            $valid_to,
+            $dentist_id
+        ]);
+    }
 
-function addDentistFee($dentist_id, $rates, $valid_from, $valid_to)
-{
-    $con = $this->opencon();
+    function addDentistFee($dentist_id, $rates, $valid_from, $valid_to)
+    {
+        $con = $this->opencon();
 
-    $sql = "INSERT INTO dentist_consul_fee 
+        $sql = "INSERT INTO dentist_consul_fee 
             (dentist_id, rates, valid_from, valid_to, created_at)
             VALUES (?, ?, ?, ?, NOW())";
 
-    $stmt = $con->prepare($sql);
+        $stmt = $con->prepare($sql);
 
-    return $stmt->execute([
-        $dentist_id,
-        $rates,
-        $valid_from,
-        $valid_to
-    ]);
+        return $stmt->execute([
+            $dentist_id,
+            $rates,
+            $valid_from,
+            $valid_to
+        ]);
+    }
 }
-}
-?>

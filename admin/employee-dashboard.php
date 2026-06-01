@@ -4,8 +4,8 @@ require_once('../class/database.php');
 $con = new database();
 
 if (!isset($_SESSION['user_id']) || $_SESSION['account_type'] != 1) {
-    header('Location: login.php');
-    exit();
+  header('Location: login.php');
+  exit();
 }
 
 $activePage = 'dashboard';
@@ -15,6 +15,7 @@ $dentistCount = count($con->viewDentists() ?? []);
 ?>
 <!doctype html>
 <html lang="en">
+
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
@@ -22,19 +23,89 @@ $dentistCount = count($con->viewDentists() ?? []);
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" />
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" />
   <style>
-    body { min-height: 100vh; background: #f4f7fb; }
-    #employeeSidebar { position: fixed; top: 0; left: 0; width: 240px; height: 100vh; background: #0d1b2a; color: #fff; z-index: 1050; overflow-y: auto; padding-top: 1.5rem; }
-    #employeeSidebar .sidebar-brand { font-size: 1.25rem; font-weight: 700; padding: 0 1.5rem; margin-bottom: 1.5rem; display: block; color: #fff; }
-    #employeeSidebar .sidebar-links { padding: 0 1.2rem; }
-    #employeeSidebar .sidebar-links a { display: block; color: #d6d6d6; padding: 0.9rem 0.75rem; text-decoration: none; border-radius: 0.65rem; margin-bottom: 0.35rem; transition: background 0.2s, color 0.2s; }
-    #employeeSidebar .sidebar-links a.active, #employeeSidebar .sidebar-links a:hover { background: #1b263b; color: #fff; }
-    nav.navbar { margin-left: 260px; transition: margin-left 0.2s ease; }
-    #pageMain { margin-left: 260px; padding-top: 1.5rem; padding-bottom: 3rem; }
-    .section-card { cursor: pointer; transition: transform 0.2s, box-shadow 0.2s; }
-    .section-card:hover { transform: translateY(-4px); box-shadow: 0 12px 24px rgba(0, 0, 0, 0.12) !important; }
-    @media (max-width: 992px) { #employeeSidebar { position: relative; height: auto; width: 100%; } nav.navbar, #pageMain { margin-left: 0; } }
+    body {
+      min-height: 100vh;
+      background: #f4f7fb;
+    }
+
+    #employeeSidebar {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 240px;
+      height: 100vh;
+      background: #0d1b2a;
+      color: #fff;
+      z-index: 1050;
+      overflow-y: auto;
+      padding-top: 1.5rem;
+    }
+
+    #employeeSidebar .sidebar-brand {
+      font-size: 1.25rem;
+      font-weight: 700;
+      padding: 0 1.5rem;
+      margin-bottom: 1.5rem;
+      display: block;
+      color: #fff;
+    }
+
+    #employeeSidebar .sidebar-links {
+      padding: 0 1.2rem;
+    }
+
+    #employeeSidebar .sidebar-links a {
+      display: block;
+      color: #d6d6d6;
+      padding: 0.9rem 0.75rem;
+      text-decoration: none;
+      border-radius: 0.65rem;
+      margin-bottom: 0.35rem;
+      transition: background 0.2s, color 0.2s;
+    }
+
+    #employeeSidebar .sidebar-links a.active,
+    #employeeSidebar .sidebar-links a:hover {
+      background: #1b263b;
+      color: #fff;
+    }
+
+    nav.navbar {
+      margin-left: 260px;
+      transition: margin-left 0.2s ease;
+    }
+
+    #pageMain {
+      margin-left: 260px;
+      padding-top: 1.5rem;
+      padding-bottom: 3rem;
+    }
+
+    .section-card {
+      cursor: pointer;
+      transition: transform 0.2s, box-shadow 0.2s;
+    }
+
+    .section-card:hover {
+      transform: translateY(-4px);
+      box-shadow: 0 12px 24px rgba(0, 0, 0, 0.12) !important;
+    }
+
+    @media (max-width: 992px) {
+      #employeeSidebar {
+        position: relative;
+        height: auto;
+        width: 100%;
+      }
+
+      nav.navbar,
+      #pageMain {
+        margin-left: 0;
+      }
+    }
   </style>
 </head>
+
 <body>
   <?php include 'employee-sidebar.php'; ?>
   <nav class="navbar navbar-expand-lg bg-white border-bottom sticky-top">
@@ -116,4 +187,5 @@ $dentistCount = count($con->viewDentists() ?? []);
   </main>
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 </body>
+
 </html>

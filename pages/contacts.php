@@ -39,7 +39,6 @@ if (isset($_POST['submit_request'])) {
         $dbMessage = "Your booking request has been forwarded to our desk successfully.";
 
         header("refresh:10;url=index.php");
-
     } catch (PDOException $e) {
 
         $dbStatus = "error";
@@ -48,7 +47,6 @@ if (isset($_POST['submit_request'])) {
         // For debugging:
         // echo $e->getMessage();
     }
-
 }
 
 ?>
@@ -62,7 +60,7 @@ if (isset($_POST['submit_request'])) {
                 Please note: this is not yet a confirmed booking. Our desk team will assign a doctor to finalize your schedule.
             </p>
 
-            <?php if(!empty($dbMessage) && $dbStatus == 'error'): ?>
+            <?php if (!empty($dbMessage) && $dbStatus == 'error'): ?>
                 <div class="alert alert-danger mb-3 small"><?= $dbMessage; ?></div>
             <?php endif; ?>
 
@@ -98,7 +96,7 @@ if (isset($_POST['submit_request'])) {
                     <label class="form-label small fw-medium">Requested Dental Service</label>
                     <select name="service_id" class="form-select" required>
                         <option value="" selected disabled>Select desired treatment procedure...</option>
-                        <?php foreach($availableServices as $srv): ?>
+                        <?php foreach ($availableServices as $srv): ?>
                             <option value="<?= $srv['Service_ID']; ?>" <?= ($service_id == $srv['Service_ID']) ? 'selected' : ''; ?>>
                                 <?= htmlspecialchars($srv['Service_Name']); ?> (₱<?= number_format($srv['Service_Fee'], 2); ?>)
                             </option>
@@ -137,38 +135,37 @@ if (isset($_POST['submit_request'])) {
 </div>
 
 <?php if ($dbStatus == "taken"): ?>
-<script>
-Swal.fire({
-    icon: 'error',
-    title: 'Slot Already Taken',
-    text: 'This schedule is already booked. Please choose another time.',
-    confirmButtonColor: '#d33'
-});
-</script>
+    <script>
+        Swal.fire({
+            icon: 'error',
+            title: 'Slot Already Taken',
+            text: 'This schedule is already booked. Please choose another time.',
+            confirmButtonColor: '#d33'
+        });
+    </script>
 <?php endif; ?>
 
 
 <?php if ($dbStatus == "success"): ?>
-<script>
-Swal.fire({
-    icon: 'success',
-    title: 'Request Submitted',
-    text: 'Your appointment has been successfully sent.',
-    confirmButtonColor: '#198754'
-});
-</script>
+    <script>
+        Swal.fire({
+            icon: 'success',
+            title: 'Request Submitted',
+            text: 'Your appointment has been successfully sent.',
+            confirmButtonColor: '#198754'
+        });
+    </script>
 <?php endif; ?>
 
 
 <?php if ($dbStatus == "error"): ?>
-<script>
-Swal.fire({
-    icon: 'error',
-    title: 'System Error',
-    text: 'Something went wrong. Please try again.',
-});
-</script>
+    <script>
+        Swal.fire({
+            icon: 'error',
+            title: 'System Error',
+            text: 'Something went wrong. Please try again.',
+        });
+    </script>
 <?php endif; ?>
 
-<?php include 'footer.php'; ?> 
-
+<?php include 'footer.php'; ?>

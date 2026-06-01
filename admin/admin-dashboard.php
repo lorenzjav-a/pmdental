@@ -53,7 +53,7 @@ if (isset($_POST['add_service_btn'])) {
 
         $msg = 'New service added successfully!';
         $msgType = 'success';
-        
+
         // Refresh services
         $clinicalServices = $db->viewServices();
     } catch (Exception $e) {
@@ -89,7 +89,6 @@ if (isset($_POST['submit_prescription_form'])) {
             $msg = "Add at least one medicine.";
             $msgType = "warning";
         }
-
     } catch (Exception $e) {
         $msg = $e->getMessage();
         $msgType = 'danger';
@@ -353,58 +352,58 @@ $pendingRequests = $db->countAppointments('Pending');
 
 
                             <tbody>
-                            <?php if (empty($clinicalServices)): ?>
-                                <tr>
-                                    <td colspan="4" class="text-center py-3 text-muted">
-                                        No procedures tracked.
-                                    </td>
-                                </tr>
-                            <?php else: ?>
-                                <?php foreach ($clinicalServices as $srv): ?>
-
-
-                                    <?php
-                                        $serviceFee = $srv['Service_Fee'] ?? 0;
-                                        $dentistShare = $srv['Dentist_Fee'] ?? ($serviceFee * 0.6);
-                                    ?>
-
-
+                                <?php if (empty($clinicalServices)): ?>
                                     <tr>
-                                        <td class="fw-semibold text-dark">
-                                            <?= htmlspecialchars($srv['Service_Name'] ?? 'N/A'); ?>
-                                        </td>
-
-
-                                        <td>
-                                            <div class="fw-bold text-success">
-                                                ₱<?= number_format($serviceFee, 2); ?>
-                                            </div>
-                                            <small class="text-muted">Total Consultation Fee</small>
-                                        </td>
-
-
-                                        <td>
-                                            <div class="fw-bold text-primary">
-                                                ₱<?= number_format($dentistShare, 2); ?>
-                                            </div>
-                                            <small class="text-muted">Dentist Earnings</small>
-                                        </td>
-
-
-                                        <td class="text-end">
-                                            <button type="button"
-                                                class="btn btn-sm btn-outline-primary update-fee-trigger"
-                                                data-id="<?= $srv['Service_ID'] ?>"
-                                                data-name="<?= htmlspecialchars($srv['Service_Name']) ?>"
-                                                data-fee="<?= $serviceFee ?>">
-                                                <i class="fa-solid fa-pen-to-square"></i> Edit
-                                            </button>
+                                        <td colspan="4" class="text-center py-3 text-muted">
+                                            No procedures tracked.
                                         </td>
                                     </tr>
+                                <?php else: ?>
+                                    <?php foreach ($clinicalServices as $srv): ?>
 
 
-                                <?php endforeach; ?>
-                            <?php endif; ?>
+                                        <?php
+                                        $serviceFee = $srv['Service_Fee'] ?? 0;
+                                        $dentistShare = $srv['Dentist_Fee'] ?? ($serviceFee * 0.6);
+                                        ?>
+
+
+                                        <tr>
+                                            <td class="fw-semibold text-dark">
+                                                <?= htmlspecialchars($srv['Service_Name'] ?? 'N/A'); ?>
+                                            </td>
+
+
+                                            <td>
+                                                <div class="fw-bold text-success">
+                                                    ₱<?= number_format($serviceFee, 2); ?>
+                                                </div>
+                                                <small class="text-muted">Total Consultation Fee</small>
+                                            </td>
+
+
+                                            <td>
+                                                <div class="fw-bold text-primary">
+                                                    ₱<?= number_format($dentistShare, 2); ?>
+                                                </div>
+                                                <small class="text-muted">Dentist Earnings</small>
+                                            </td>
+
+
+                                            <td class="text-end">
+                                                <button type="button"
+                                                    class="btn btn-sm btn-outline-primary update-fee-trigger"
+                                                    data-id="<?= $srv['Service_ID'] ?>"
+                                                    data-name="<?= htmlspecialchars($srv['Service_Name']) ?>"
+                                                    data-fee="<?= $serviceFee ?>">
+                                                    <i class="fa-solid fa-pen-to-square"></i> Edit
+                                                </button>
+                                            </td>
+                                        </tr>
+
+
+                                    <?php endforeach; ?>
+                                <?php endif; ?>
                             </tbody>
                         </table>
                     </div>
@@ -462,20 +461,21 @@ $pendingRequests = $db->countAppointments('Pending');
                                             </td>
 
 
-                                                    <td class="text-end"> <div class="btn-group gap-1">
+                                            <td class="text-end">
+                                                <div class="btn-group gap-1">
 
-        <a href="users.php?patient_id=<?= $app['Patient_ID'] ?? 0; ?>"
-           class="btn btn-sm btn-light border text-primary">
-            <i class="fa-solid fa-folder-medical"></i> View Chart
-        </a>
+                                                    <a href="users.php?patient_id=<?= $app['Patient_ID'] ?? 0; ?>"
+                                                        class="btn btn-sm btn-light border text-primary">
+                                                        <i class="fa-solid fa-folder-medical"></i> View Chart
+                                                    </a>
 
-        <a href="appointments.php?appointment_id=<?= $app['Appointment_ID'] ?? 0; ?>"
-           class="btn btn-sm btn-primary">
-            <i class="fa-solid fa-pills me-1"></i> + Rx
-        </a>
+                                                    <a href="appointments.php?appointment_id=<?= $app['Appointment_ID'] ?? 0; ?>"
+                                                        class="btn btn-sm btn-primary">
+                                                        <i class="fa-solid fa-pills me-1"></i> + Rx
+                                                    </a>
 
-    </div>
-</td>
+                                                </div>
+                                            </td>
                                         </tr>
                                     <?php endforeach; ?>
                                 <?php endif; ?>
@@ -553,114 +553,114 @@ $pendingRequests = $db->countAppointments('Pending');
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 
 
-<script>
-document.addEventListener('DOMContentLoaded', function () {
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
 
 
-    document.addEventListener('click', function (e) {
+            document.addEventListener('click', function(e) {
 
 
-        // ================= VIEW CHART =================
-        const viewBtn = e.target.closest('.view-intake-btn');
-        if (viewBtn) {
-            const patId = viewBtn.getAttribute('data-patient-id');
-            const listbox = document.getElementById('history_feed_box');
+                // ================= VIEW CHART =================
+                const viewBtn = e.target.closest('.view-intake-btn');
+                if (viewBtn) {
+                    const patId = viewBtn.getAttribute('data-patient-id');
+                    const listbox = document.getElementById('history_feed_box');
 
 
-            listbox.innerHTML = `
+                    listbox.innerHTML = `
                 <div class="text-center py-3 text-muted small">
                     <div class="spinner-border spinner-border-sm me-2"></div>
                     Loading...
                 </div>`;
 
 
-            const modal = new bootstrap.Modal(document.getElementById('patientIntakeModal'));
-            modal.show();
+                    const modal = new bootstrap.Modal(document.getElementById('patientIntakeModal'));
+                    modal.show();
 
 
-            fetch('?fetch_patient_details=1&patient_id=' + patId)
-                .then(r => r.json())
-                .then(res => {
+                    fetch('?fetch_patient_details=1&patient_id=' + patId)
+                        .then(r => r.json())
+                        .then(res => {
 
 
-                    if (res.error) {
-                        listbox.innerHTML = `<div class="alert alert-warning small p-2">${res.error}</div>`;
-                        return;
-                    }
+                            if (res.error) {
+                                listbox.innerHTML = `<div class="alert alert-warning small p-2">${res.error}</div>`;
+                                return;
+                            }
 
 
-                    document.getElementById('chart_name').innerText =
-                        (res.Patient_FN || '') + ' ' + (res.Patient_LN || '');
+                            document.getElementById('chart_name').innerText =
+                                (res.Patient_FN || '') + ' ' + (res.Patient_LN || '');
 
 
-                    document.getElementById('chart_phone').innerText =
-                        res.Patient_PhoneNo || 'None';
+                            document.getElementById('chart_phone').innerText =
+                                res.Patient_PhoneNo || 'None';
 
 
-                    document.getElementById('chart_dob').innerText =
-                        res.Patient_BirthDate || 'Not specified';
+                            document.getElementById('chart_dob').innerText =
+                                res.Patient_BirthDate || 'Not specified';
 
 
-                    document.getElementById('chart_gender').innerText =
-                        res.Patient_Gender || 'unspecified';
+                            document.getElementById('chart_gender').innerText =
+                                res.Patient_Gender || 'unspecified';
 
 
-                    listbox.innerHTML = '';
+                            listbox.innerHTML = '';
 
 
-                    if (!res.medical_history || res.medical_history.length === 0) {
-                        listbox.innerHTML = `<div class="text-muted small">No history found</div>`;
-                        return;
-                    }
+                            if (!res.medical_history || res.medical_history.length === 0) {
+                                listbox.innerHTML = `<div class="text-muted small">No history found</div>`;
+                                return;
+                            }
 
 
-                    res.medical_history.forEach(h => {
-                        listbox.innerHTML += `
+                            res.medical_history.forEach(h => {
+                                listbox.innerHTML += `
                             <div class="border p-2 mb-2 rounded">
                                 <b class="text-danger">${h.Med_History_Name}</b>
                                 <div class="small text-muted">${h.Med_History_Desc || ''}</div>
                             </div>`;
-                    });
-                });
-        }
+                            });
+                        });
+                }
 
 
-        // ================= EDIT FEE =================
-        const editBtn = e.target.closest('.update-fee-trigger');
-        if (editBtn) {
-            document.getElementById('target_service_id').value = editBtn.dataset.id;
-            document.getElementById('target_service_name').value = editBtn.dataset.name;
-            document.getElementById('consultation_fee').value = editBtn.dataset.fee;
+                // ================= EDIT FEE =================
+                const editBtn = e.target.closest('.update-fee-trigger');
+                if (editBtn) {
+                    document.getElementById('target_service_id').value = editBtn.dataset.id;
+                    document.getElementById('target_service_name').value = editBtn.dataset.name;
+                    document.getElementById('consultation_fee').value = editBtn.dataset.fee;
 
 
-            new bootstrap.Modal(document.getElementById('feeSettingsModal')).show();
-        }
+                    new bootstrap.Modal(document.getElementById('feeSettingsModal')).show();
+                }
 
 
-        // ================= RX =================
-        const rxBtn = e.target.closest('.write-rx-btn');
-        if (rxBtn) {
-            document.getElementById('rx_appointment_id').value = rxBtn.dataset.apptId;
-            document.getElementById('rx_patient_label').innerText = rxBtn.dataset.patientFullname;
+                // ================= RX =================
+                const rxBtn = e.target.closest('.write-rx-btn');
+                if (rxBtn) {
+                    document.getElementById('rx_appointment_id').value = rxBtn.dataset.apptId;
+                    document.getElementById('rx_patient_label').innerText = rxBtn.dataset.patientFullname;
 
 
-            new bootstrap.Modal(document.getElementById('prescriptionWritingModal')).show();
-        }
+                    new bootstrap.Modal(document.getElementById('prescriptionWritingModal')).show();
+                }
 
 
-    });
+            });
 
 
-    // ================= ADD RX ROW =================
-    document.getElementById('addRxItemRow').addEventListener('click', function () {
-        const container = document.getElementById('rx_items_container');
+            // ================= ADD RX ROW =================
+            document.getElementById('addRxItemRow').addEventListener('click', function() {
+                const container = document.getElementById('rx_items_container');
 
 
-        const row = document.createElement('div');
-        row.className = 'row g-2 align-items-center rx-item-row mb-2 pb-2 border-bottom';
+                const row = document.createElement('div');
+                row.className = 'row g-2 align-items-center rx-item-row mb-2 pb-2 border-bottom';
 
 
-        row.innerHTML = `
+                row.innerHTML = `
             <div class="col-5"><input type="text" name="med_name[]" class="form-control form-control-sm" required></div>
             <div class="col-2"><input type="number" name="med_qty[]" value="1" class="form-control form-control-sm"></div>
             <div class="col-4"><input type="text" name="med_dosage[]" class="form-control form-control-sm"></div>
@@ -672,26 +672,27 @@ document.addEventListener('DOMContentLoaded', function () {
         `;
 
 
-        container.appendChild(row);
-    });
+                container.appendChild(row);
+            });
 
 
-    // ================= REMOVE RX ROW =================
-    document.getElementById('rx_items_container').addEventListener('click', function (e) {
-        if (e.target.closest('.remove-rx-row')) {
-            const row = e.target.closest('.rx-item-row');
-            if (document.querySelectorAll('.rx-item-row').length > 1) {
-                row.remove();
-            } else {
-                alert('At least one row required.');
-            }
-        }
-    });
+            // ================= REMOVE RX ROW =================
+            document.getElementById('rx_items_container').addEventListener('click', function(e) {
+                if (e.target.closest('.remove-rx-row')) {
+                    const row = e.target.closest('.rx-item-row');
+                    if (document.querySelectorAll('.rx-item-row').length > 1) {
+                        row.remove();
+                    } else {
+                        alert('At least one row required.');
+                    }
+                }
+            });
 
 
-});
-</script>
+        });
+    </script>
 
 
 </body>
+
 </html>

@@ -13,7 +13,7 @@ if (!function_exists('sidebarActive')) {
     <div class="sidebar-brand">PM Dental Staff</div>
     <div class="sidebar-links">
         <a href="employee-dashboard.php" class="<?= sidebarActive('dashboard'); ?>">
-            <i class="fa-solid fa-house me-2"></i>Dashboard Home
+            <i class="fa-solid fa-house me-2"></i>Dashboard
         </a>
         <a href="patient-appointments-queue.php" class="<?= sidebarActive('appointments_queue'); ?>">
             <i class="fa-solid fa-calendar-check me-2"></i>Patient Appointments Queue
