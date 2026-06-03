@@ -9,6 +9,7 @@ if (!isset($_SESSION['user_id']) || $_SESSION['account_type'] != 1) {
 }
 
 $activePage = 'dashboard';
+$employee_name = $_SESSION['admin_name'] ?? 'Staff';
 $appointmentCount = count($con->viewAppointments() ?? []);
 $patientCount = count($con->viewPatients() ?? []);
 $dentistCount = count($con->viewDentists() ?? []);
@@ -119,7 +120,7 @@ $dentistCount = count($con->viewDentists() ?? []);
           <li class="nav-item"><a class="nav-link active" href="employee-dashboard.php">Home</a></li>
         </ul>
         <div class="d-flex align-items-center gap-2">
-          <span class="badge bg-primary">Role: CLINIC STAFF</span>
+          <span class="badge bg-primary"><?= htmlspecialchars($employee_name); ?></span>
           <a class="btn btn-sm btn-outline-secondary" href="login.php">Logout</a>
         </div>
       </div>
@@ -165,7 +166,7 @@ $dentistCount = count($con->viewDentists() ?? []);
               </a>
             </div>
             <div class="col">
-              <a href="dentist-schedule-rosters.php" class="text-decoration-none">
+              <a href="employee-calendar.php" class="text-decoration-none">
                 <div class="card h-100 border-0 shadow-sm section-card">
                   <div class="card-body">
                     <div class="d-flex align-items-start justify-content-between mb-3">

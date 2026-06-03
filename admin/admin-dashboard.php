@@ -97,6 +97,16 @@ if (isset($_POST['submit_prescription_form'])) {
 
 // DATA
 $admin_name = $_SESSION['admin_name'] ?? 'Admin';
+$account_type = $_SESSION['account_type'] ?? 0;
+$admin_id = $_SESSION['admin_id'] ?? 0;
+
+// Fetch dentist name from database if dentist
+if ($account_type == 2 && $admin_id) {
+    $dentistInfo = $db->getDentistById($admin_id);
+    if ($dentistInfo) {
+        $admin_name = trim(($dentistInfo['Dentist_FN'] ?? '') . ' ' . ($dentistInfo['Dentist_LN'] ?? '')) ?: $admin_name;
+    }
+}
 
 $allAppointments = $db->viewAppointments();
 $clinicalServices = $db->viewServices();
@@ -132,47 +142,51 @@ $pendingRequests = $db->countAppointments('Pending');
         }
 
 
-        .sidebar {
-            width: 250px;
-            height: 100vh;
+        #adminSidebar {
             position: fixed;
+            top: 0;
+            left: 0;
+            width: 240px;
+            height: 100vh;
             background: #0d1b2a;
-            color: white;
-            padding-top: 20px;
+            color: #fff;
+            z-index: 1050;
+            overflow-y: auto;
+            padding-top: 1.5rem;
         }
 
-
-        .sidebar h2 {
-            text-align: center;
-            margin-bottom: 35px;
-            font-weight: bold;
+        #adminSidebar .sidebar-brand {
+            font-size: 1.25rem;
+            font-weight: 700;
+            padding: 0 1.5rem;
+            margin-bottom: 1.5rem;
+            display: block;
+            color: #fff;
         }
 
+        #adminSidebar .sidebar-links {
+            padding: 0 1.2rem;
+        }
 
-        .sidebar a {
+        #adminSidebar .sidebar-links a {
             display: block;
             color: #d6d6d6;
+            padding: 0.9rem 0.75rem;
             text-decoration: none;
-            padding: 15px 25px;
-            transition: 0.3s;
+            border-radius: 0.65rem;
+            margin-bottom: 0.35rem;
+            transition: background 0.2s, color 0.2s;
         }
 
-
-        .sidebar a:hover,
-        .sidebar a.active {
+        #adminSidebar .sidebar-links a.active,
+        #adminSidebar .sidebar-links a:hover {
             background: #1b263b;
-            color: white;
-            padding-left: 30px;
-        }
-
-
-        .sidebar i {
-            margin-right: 10px;
+            color: #fff;
         }
 
 
         .main {
-            margin-left: 250px;
+            margin-left: 260px;
             padding: 25px;
         }
 
@@ -273,6 +287,7 @@ $pendingRequests = $db->countAppointments('Pending');
             <a class="active" href="admin-dashboard.php"><i class="fas fa-chart-line"></i> Dashboard</a>
             <a href="appointments.php"><i class="fas fa-clock"></i> Appointments</a>
             <a href="clinical-vault.php"><i class="fas fa-prescription"></i> Clinical Vault</a>
+            <a href="calendar.php"><i class="fas fa-calendar-days"></i> Calendar</a>
         </div>
     <?php } ?>
 
@@ -282,7 +297,7 @@ $pendingRequests = $db->countAppointments('Pending');
 
         <div class="topbar">
             <div>
-                <h3>Welcome, Dr. <?= htmlspecialchars($admin_name); ?></h3>
+                <h3>Welcome, <?= ($account_type == 2 ? 'Dr. ' : '') . htmlspecialchars($admin_name); ?></h3>
                 <small class="text-muted">Clinical Case File Directory & Practice Manager Portal</small>
             </div>
             <a href="login.php" class="logout-btn"><i class="fas fa-sign-out-alt me-2"></i>Exit System</a>
@@ -417,11 +432,12 @@ $pendingRequests = $db->countAppointments('Pending');
                     <div class="mb-3">
                         <h4 class="fw-bold text-dark mb-1">Clinical Case Records Queue</h4>
                         <p class="text-muted small mb-0">Audit baseline staff medical histories or compile prescription formulas</p>
+                        <input id="appointmentsSearch" type="search" class="form-control form-control-sm mt-3" placeholder="Search appointments by ID, patient name, status, date...">
                     </div>
 
 
                     <div class="table-responsive">
-                        <table class="table table-hover align-middle">
+                        <table id="appointmentsTable" class="table table-hover align-middle">
                             <thead>
                                 <tr>
                                     <th>Patient</th>
@@ -469,10 +485,13 @@ $pendingRequests = $db->countAppointments('Pending');
                                                         <i class="fa-solid fa-folder-medical"></i> View Chart
                                                     </a>
 
-                                                    <a href="appointments.php?appointment_id=<?= $app['Appointment_ID'] ?? 0; ?>"
-                                                        class="btn btn-sm btn-primary">
+                                                    <button type="button" 
+                                                        class="btn btn-sm btn-primary write-rx-btn"
+                                                        data-appt-id="<?= $app['Appointment_ID'] ?? 0; ?>"
+                                                        data-patient-id="<?= $app['Patient_ID'] ?? 0; ?>"
+                                                        data-patient-fullname="<?= htmlspecialchars(($app['Patient_FN'] ?? '') . ' ' . ($app['Patient_LN'] ?? '')); ?>">
                                                         <i class="fa-solid fa-pills me-1"></i> + Rx
-                                                    </a>
+                                                    </button>
 
                                                 </div>
                                             </td>
@@ -492,8 +511,8 @@ $pendingRequests = $db->countAppointments('Pending');
     </div>
 
 
-    <!-- MODALS (UNCHANGED) -->
-    <!-- Fee Modal -->
+    
+    // fee settings 
     <div class="modal fade" id="feeSettingsModal" tabindex="-1" aria-hidden="true">
         <div class="modal-dialog modal-dialog-centered modal-sm">
             <form action="" method="POST" class="modal-content">
@@ -547,8 +566,116 @@ $pendingRequests = $db->countAppointments('Pending');
         </div>
     </div>
 
-    <!-- (OTHER MODALS + SCRIPT UNCHANGED — kept as-is in your original) -->
+    <!-- Patient Intake Modal -->
+    <div class="modal fade" id="patientIntakeModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered modal-lg">
+            <div class="modal-content border-0 shadow">
+                <div class="modal-header bg-info text-white">
+                    <h5 class="modal-title fw-bold"><i class="fa-solid fa-user-chart me-2"></i>Patient Profile & Medical History</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="row mb-4 pb-3 border-bottom">
+                        <div class="col-md-6">
+                            <div class="mb-2">
+                                <small class="text-muted d-block">Full Name</small>
+                                <strong id="chart_name" class="fs-5 text-dark">-</strong>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-2">
+                                <small class="text-muted d-block">Date of Birth</small>
+                                <strong id="chart_dob" class="fs-5 text-dark">-</strong>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="row mb-4 pb-3 border-bottom">
+                        <div class="col-md-6">
+                            <div class="mb-2">
+                                <small class="text-muted d-block">Phone Number</small>
+                                <strong id="chart_phone" class="fs-5 text-dark">-</strong>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-2">
+                                <small class="text-muted d-block">Email Address</small>
+                                <strong id="chart_email" class="fs-5 text-dark">-</strong>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <div class="mb-2">
+                                <small class="text-muted d-block">Gender</small>
+                                <strong id="chart_gender" class="fs-5 text-dark">-</strong>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="mt-4">
+                        <h6 class="fw-bold text-dark mb-3">Medical History Records</h6>
+                        <div id="history_feed_box" class="bg-light p-3 rounded" style="max-height: 300px; overflow-y: auto;">
+                            <div class="text-center py-3 text-muted small">No history found</div>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer bg-light p-2">
+                    <button type="button" class="btn btn-sm btn-secondary" data-bs-dismiss="modal">Close</button>
+                </div>
+            </div>
+        </div>
+    </div>
 
+    <!-- PRESCRIPTION WRITING MODAL -->
+    <div class="modal fade" id="prescriptionWritingModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-lg modal-dialog-centered">
+            <form action="" method="POST" class="modal-content border-0 shadow">
+                <div class="modal-header bg-success text-white">
+                    <h5 class="modal-title fw-bold"><i class="fa-solid fa-prescription-bottle me-2"></i>Write Patient Prescription</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <input type="hidden" name="rx_appointment_id" id="rx_appointment_id">
+                    <div class="mb-3 bg-light p-3 rounded">
+                        <span class="text-muted small d-block">Patient Name:</span>
+                        <strong id="rx_patient_label" class="text-danger fs-5"></strong>
+                    </div>
+
+                    <h6 class="fw-bold text-dark mb-3">Prescription Items</h6>
+                    <div id="rx_items_container">
+                        <div class="row g-2 align-items-center rx-item-row mb-2 pb-2 border-bottom">
+                            <div class="col-5">
+                                <label class="form-label small fw-medium">Medicine Name</label>
+                                <input type="text" name="med_name[]" class="form-control form-control-sm" placeholder="e.g., Amoxicillin" required>
+                            </div>
+                            <div class="col-2">
+                                <label class="form-label small fw-medium">Quantity</label>
+                                <input type="number" name="med_qty[]" value="1" class="form-control form-control-sm" min="1">
+                            </div>
+                            <div class="col-4">
+                                <label class="form-label small fw-medium">Dosage</label>
+                                <input type="text" name="med_dosage[]" class="form-control form-control-sm" placeholder="e.g., 500mg 3x daily">
+                            </div>
+                            <div class="col-1 text-center">
+                                <button type="button" class="btn btn-sm btn-link text-danger remove-rx-row" style="margin-top: 1.85rem;">
+                                    <i class="fa-solid fa-trash"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <button type="button" id="addRxItemRow" class="btn btn-sm btn-outline-success mt-2">
+                        <i class="fa-solid fa-plus me-1"></i> Add Medicine
+                    </button>
+                </div>
+                <div class="modal-footer bg-light p-2">
+                    <button type="button" class="btn btn-sm btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" name="submit_prescription_form" class="btn btn-sm btn-success">
+                        <i class="fa-solid fa-check me-1"></i> Save Prescription
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 
@@ -595,6 +722,10 @@ $pendingRequests = $db->countAppointments('Pending');
 
                             document.getElementById('chart_phone').innerText =
                                 res.Patient_PhoneNo || 'None';
+
+
+                            document.getElementById('chart_email').innerText =
+                                res.Patient_Email || 'None';
 
 
                             document.getElementById('chart_dob').innerText =
@@ -652,7 +783,9 @@ $pendingRequests = $db->countAppointments('Pending');
 
 
             // ================= ADD RX ROW =================
-            document.getElementById('addRxItemRow').addEventListener('click', function() {
+            const addRxBtn = document.getElementById('addRxItemRow');
+            if (addRxBtn) {
+                addRxBtn.addEventListener('click', function() {
                 const container = document.getElementById('rx_items_container');
 
 
@@ -673,11 +806,14 @@ $pendingRequests = $db->countAppointments('Pending');
 
 
                 container.appendChild(row);
-            });
+                });
+            }
 
 
             // ================= REMOVE RX ROW =================
-            document.getElementById('rx_items_container').addEventListener('click', function(e) {
+            const rxItemsContainer = document.getElementById('rx_items_container');
+            if (rxItemsContainer) {
+                rxItemsContainer.addEventListener('click', function(e) {
                 if (e.target.closest('.remove-rx-row')) {
                     const row = e.target.closest('.rx-item-row');
                     if (document.querySelectorAll('.rx-item-row').length > 1) {
@@ -686,8 +822,43 @@ $pendingRequests = $db->countAppointments('Pending');
                         alert('At least one row required.');
                     }
                 }
-            });
+                });
+            }
 
+            // ================= SEARCH APPOINTMENTS =================
+            function installTableSearch(inputId, tableId) {
+              const input = document.getElementById(inputId);
+              const table = document.getElementById(tableId);
+              if (!input || !table) return;
+
+              input.addEventListener('input', function() {
+                const query = this.value.trim().toLowerCase();
+                const rows = table.querySelectorAll('tbody tr');
+                let visibleCount = 0;
+
+                rows.forEach(row => {
+                  if (row.id && row.id.endsWith('_no_results')) return;
+                  const isVisible = query === '' || row.textContent.toLowerCase().includes(query);
+                  row.style.display = isVisible ? '' : 'none';
+                  if (isVisible) visibleCount += 1;
+                });
+
+                const noResultsRowId = tableId + '_no_results';
+                let noResultsRow = document.getElementById(noResultsRowId);
+                if (visibleCount > 0 || query === '') {
+                  if (noResultsRow) noResultsRow.remove();
+                  return;
+                }
+                if (!noResultsRow) {
+                  noResultsRow = document.createElement('tr');
+                  noResultsRow.id = noResultsRowId;
+                  noResultsRow.innerHTML = '<td colspan="4" class="text-center text-muted py-4">No matching records found.</td>';
+                  table.querySelector('tbody').appendChild(noResultsRow);
+                }
+              });
+            }
+
+            installTableSearch('appointmentsSearch', 'appointmentsTable');
 
         });
     </script>

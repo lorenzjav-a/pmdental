@@ -31,6 +31,25 @@ if (isset($_POST['assign_dentist'])) {
     }
 }
 
+if (isset($_POST['update_appointment_time'])) {
+    $appointment_id = (int)$_POST['appointment_id'];
+    $new_appointment_date = $_POST['new_appointment_date'];
+    $new_appointment_time = $_POST['new_appointment_time'];
+    
+    // Combine date and time into datetime format
+    $new_appointment_datetime = date('Y-m-d H:i:s', strtotime($new_appointment_date . ' ' . $new_appointment_time));
+    
+    try {
+        $con->updateAppointmentDateTime($appointment_id, $new_appointment_datetime);
+        $alertStatus = 'success';
+        $alertMessage = 'Appointment time updated successfully. You can now assign a dentist.';
+        $allAppointments = $con->viewAppointments();
+    } catch (Exception $e) {
+        $alertStatus = 'error';
+        $alertMessage = 'Failed to update appointment time: ' . $e->getMessage();
+    }
+}
+
 if (isset($_POST['execute_checkout'])) {
     $appointment_id = (int)$_POST['checkout_appointment_id'];
     $payment_method = $_POST['payment_method'];
@@ -181,8 +200,9 @@ if (isset($_POST['execute_checkout'])) {
               </select>
             </div>
             <div class="row g-2">
-              <div class="col-6"><button type="button" class="btn btn-light w-100" data-bs-dismiss="modal">Cancel</button></div>
-              <div class="col-6"><button name="assign_dentist" class="btn btn-primary w-100" type="submit">Confirm Assignment</button></div>
+              <div class="col-4"><button type="button" class="btn btn-light w-100" data-bs-dismiss="modal">Cancel</button></div>
+              <div class="col-4"><button type="button" class="btn btn-warning w-100" id="editTimeBtn" data-bs-dismiss="modal"><i class="fa-solid fa-clock me-1"></i>Edit Time</button></div>
+              <div class="col-4"><button name="assign_dentist" class="btn btn-primary w-100" type="submit">Confirm</button></div>
             </div>
           </form>
         </div>
@@ -241,21 +261,103 @@ if (isset($_POST['execute_checkout'])) {
     </div>
   </div>
 
+  <!-- Edit Appointment Time Modal -->
+  <div class="modal fade" id="editTimeModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title fw-bold"><i class="fa-solid fa-clock me-2"></i>Edit Appointment Time</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        </div>
+        <form action="patient-appointments-queue.php" method="POST">
+          <div class="modal-body">
+            <input type="hidden" name="appointment_id" id="edit_appointment_id">
+            <div class="alert alert-warning" role="alert">
+              <strong>Note:</strong> The selected time slot is already booked by another appointment. Please choose a different date or time.
+            </div>
+            <div class="mb-3 bg-light p-3 rounded">
+              <span class="text-muted small d-block">Patient:</span>
+              <strong id="edit_patient_name" class="text-dark d-block"></strong>
+            </div>
+            <div class="mb-3">
+              <label for="edit_appointment_date" class="form-label small fw-medium">New Date</label>
+              <input type="date" id="edit_appointment_date" name="new_appointment_date" class="form-control" required>
+            </div>
+            <div class="mb-4">
+              <label for="edit_appointment_time" class="form-label small fw-medium">New Time</label>
+              <input type="time" id="edit_appointment_time" name="new_appointment_time" class="form-control" required>
+            </div>
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-light" data-bs-dismiss="modal">Cancel</button>
+            <button type="submit" name="update_appointment_time" class="btn btn-primary">Update & Close</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
   <script src="../sweetalert/dist/sweetalert2.js"></script>
   <script>
+    // Store the current assignment attempt data
+    let currentAssignmentData = {
+      appointmentId: null,
+      patientName: null,
+      appointmentDate: null,
+      dentistId: null
+    };
     const assignModal = document.getElementById('assignModal');
     assignModal.addEventListener('show.bs.modal', function(event) {
       const btn = event.relatedTarget;
       if (!btn) return;
-      document.getElementById('modal_appointment_id').value = btn.getAttribute('data-app-id') || '';
-      document.getElementById('modal_patient_name').innerText = btn.getAttribute('data-patient-name') || '';
-      const raw = btn.getAttribute('data-app-date') || '';
+      
+      const appointmentId = btn.getAttribute('data-app-id') || '';
+      const patientName = btn.getAttribute('data-patient-name') || '';
+      const appointmentDate = btn.getAttribute('data-app-date') || '';
+      
+      // Store current assignment data
+      currentAssignmentData = {
+        appointmentId: appointmentId,
+        patientName: patientName,
+        appointmentDate: appointmentDate,
+        dentistId: null
+      };
+      
+      document.getElementById('modal_appointment_id').value = appointmentId;
+      document.getElementById('modal_patient_name').innerText = patientName;
       try {
-        document.getElementById('modal_appointment_date').innerText = raw ? new Date(raw.replace(' ', 'T')).toLocaleString() : ''; 
+        document.getElementById('modal_appointment_date').innerText = appointmentDate ? new Date(appointmentDate.replace(' ', 'T')).toLocaleString() : ''; 
       } catch (e) {
-        document.getElementById('modal_appointment_date').innerText = raw;
+        document.getElementById('modal_appointment_date').innerText = appointmentDate;
       }
+    });
+
+    // Override form submission to handle conflicts with edit option
+    const assignForm = document.querySelector('#assignModal form');
+    if (assignForm) {
+      assignForm.addEventListener('submit', function(e) {
+        // Allow normal submission - PHP will handle it
+        // If there's a conflict error, it will be shown by SweetAlert below
+      });
+    }
+
+    // Handle Edit Time button click
+    document.getElementById('editTimeBtn').addEventListener('click', function() {
+      const editModal = new bootstrap.Modal(document.getElementById('editTimeModal'));
+      document.getElementById('edit_appointment_id').value = currentAssignmentData.appointmentId;
+      document.getElementById('edit_patient_name').innerText = currentAssignmentData.patientName;
+      
+      // Pre-fill with current appointment date/time if available
+      if (currentAssignmentData.appointmentDate) {
+        const dateObj = new Date(currentAssignmentData.appointmentDate.replace(' ', 'T'));
+        const dateStr = dateObj.toISOString().split('T')[0];
+        const timeStr = dateObj.toISOString().split('T')[1].substring(0, 5);
+        document.getElementById('edit_appointment_date').value = dateStr;
+        document.getElementById('edit_appointment_time').value = timeStr;
+      }
+      
+      editModal.show();
     });
 
     const checkoutModal = document.getElementById('checkoutModal');
@@ -331,8 +433,30 @@ if (isset($_POST['execute_checkout'])) {
 
     if (alertMsgStatus === 'success') Swal.fire({ icon: 'success', title: 'Success', text: alertMsgText });
     else if (alertMsgStatus === 'error') Swal.fire({ icon: 'error', title: 'Action Failed', text: alertMsgText });
-    if (assignMsgStatus === 'success') Swal.fire({ icon: 'success', title: 'Assigned', text: assignMsgText });
-    else if (assignMsgStatus === 'error') Swal.fire({ icon: 'error', title: 'Assignment Failed', text: assignMsgText });
+    
+    if (assignMsgStatus === 'success') {
+      Swal.fire({ icon: 'success', title: 'Assigned', text: assignMsgText });
+    } else if (assignMsgStatus === 'error') {
+      // Check if this is a conflict error
+      const isConflict = assignMsgText && assignMsgText.includes('Conflict');
+      
+      if (isConflict) {
+        Swal.fire({
+          icon: 'warning',
+          title: 'Time Slot Conflict',
+          text: assignMsgText,
+          didClose: function() {
+            // Auto-open edit time modal after conflict message
+            const editModal = new bootstrap.Modal(document.getElementById('editTimeModal'));
+            document.getElementById('edit_appointment_id').value = currentAssignmentData.appointmentId;
+            document.getElementById('edit_patient_name').innerText = currentAssignmentData.patientName;
+            editModal.show();
+          }
+        });
+      } else {
+        Swal.fire({ icon: 'error', title: 'Assignment Failed', text: assignMsgText });
+      }
+    }
   </script>
 </body>
 </html>

@@ -23,12 +23,12 @@ $users = $db->viewUsers();
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body { font-family: Arial, sans-serif; background: #f4f7fb; }
-        .sidebar { width: 250px; height: 100vh; position: fixed; background: #0d1b2a; color: white; padding-top: 20px; }
-        .sidebar h2 { text-align: center; margin-bottom: 35px; font-weight: bold; }
-        .sidebar a { display: block; color: #d6d6d6; text-decoration: none; padding: 15px 25px; transition: 0.3s; }
-        .sidebar a:hover, .sidebar a.active { background: #1b263b; color: white; padding-left: 30px; }
-        .sidebar i { margin-right: 10px; }
-        .main { margin-left: 250px; padding: 25px; }
+        #adminSidebar { position: fixed; top: 0; left: 0; width: 240px; height: 100vh; background: #0d1b2a; color: #fff; z-index: 1050; overflow-y: auto; padding-top: 1.5rem; }
+        #adminSidebar .sidebar-brand { font-size: 1.25rem; font-weight: 700; padding: 0 1.5rem; margin-bottom: 1.5rem; display: block; color: #fff; }
+        #adminSidebar .sidebar-links { padding: 0 1.2rem; }
+        #adminSidebar .sidebar-links a { display: block; color: #d6d6d6; padding: 0.9rem 0.75rem; text-decoration: none; border-radius: 0.65rem; margin-bottom: 0.35rem; transition: background 0.2s, color 0.2s; }
+        #adminSidebar .sidebar-links a.active, #adminSidebar .sidebar-links a:hover { background: #1b263b; color: #fff; }
+        .main { margin-left: 260px; padding: 25px; }
         .topbar { background: white; border-radius: 12px; padding: 18px 25px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 2px 10px rgba(0,0,0,0.05); }
         .logout-btn { background: #dc3545; color: white; text-decoration: none; padding: 10px 15px; border-radius: 8px; transition: 0.3s; }
         .logout-btn:hover { background: #bb2d3b; }

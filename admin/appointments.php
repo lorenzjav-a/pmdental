@@ -33,42 +33,50 @@ $appointments = $db->viewAppointments();
             background: #f4f7fb;
         }
 
-        .sidebar {
-            width: 250px;
-            height: 100vh;
+        #adminSidebar {
             position: fixed;
+            top: 0;
+            left: 0;
+            width: 240px;
+            height: 100vh;
             background: #0d1b2a;
-            color: white;
-            padding-top: 20px;
+            color: #fff;
+            z-index: 1050;
+            overflow-y: auto;
+            padding-top: 1.5rem;
         }
 
-        .sidebar h2 {
-            text-align: center;
-            margin-bottom: 35px;
-            font-weight: bold;
+        #adminSidebar .sidebar-brand {
+            font-size: 1.25rem;
+            font-weight: 700;
+            padding: 0 1.5rem;
+            margin-bottom: 1.5rem;
+            display: block;
+            color: #fff;
         }
 
-        .sidebar a {
+        #adminSidebar .sidebar-links {
+            padding: 0 1.2rem;
+        }
+
+        #adminSidebar .sidebar-links a {
             display: block;
             color: #d6d6d6;
+            padding: 0.9rem 0.75rem;
             text-decoration: none;
-            padding: 15px 25px;
-            transition: 0.3s;
+            border-radius: 0.65rem;
+            margin-bottom: 0.35rem;
+            transition: background 0.2s, color 0.2s;
         }
 
-        .sidebar a:hover,
-        .sidebar a.active {
+        #adminSidebar .sidebar-links a.active,
+        #adminSidebar .sidebar-links a:hover {
             background: #1b263b;
-            color: white;
-            padding-left: 30px;
-        }
-
-        .sidebar i {
-            margin-right: 10px;
+            color: #fff;
         }
 
         .main {
-            margin-left: 250px;
+            margin-left: 260px;
             padding: 25px;
         }
 

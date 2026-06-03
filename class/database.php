@@ -187,7 +187,19 @@ class database
             $stmt->execute();
             return $stmt->fetchAll(PDO::FETCH_ASSOC);
         } catch (PDOException $e) {
-            return true;
+            return [];
+        }
+    }
+
+    function getDentistById($dentist_id)
+    {
+        $con = $this->opencon();
+        try {
+            $stmt = $con->prepare("SELECT Dentist_ID, Dentist_FN, Dentist_LN, email FROM dentist WHERE Dentist_ID = ?");
+            $stmt->execute([$dentist_id]);
+            return $stmt->fetch(PDO::FETCH_ASSOC);
+        } catch (PDOException $e) {
+            return false;
         }
     }
 
@@ -327,16 +339,28 @@ class database
             throw new Exception("Conflict! This dentist already has an appointment with $name at $time.");
         }
         $con = $this->opencon();
-        $stmt = $con->prepare("UPDATE appointment SET Employee_ID=?, Dentist_ID=?, Appointment_Status='Confirmed', Appointment_Date=Appointment_Date
-        WHERE Appointment_ID=?
-    ");
-        $stmt->execute([$employee_id, $dentist_id, $appointment_id]);
-        return true;
+        try {
+            $con->beginTransaction();
+            
+            // Update appointment to confirm
+            $stmt = $con->prepare("UPDATE appointment SET Employee_ID=?, Dentist_ID=?, Appointment_Status='Confirmed', Appointment_Date=Appointment_Date
+            WHERE Appointment_ID=?
+        ");
+            $stmt->execute([$employee_id, $dentist_id, $appointment_id]);
+            
+            $con->commit();
+            return true;
+        } catch (PDOException $e) {
+            if ($con->inTransaction()) {
+                $con->rollBack();
+            }
+            throw $e;
+        }
     }
     function getDentistAppointments($dentist_id)
     {
         $con = $this->opencon();
-        $stmt = $con->prepare("SELECT a.Appointment_ID, a.Appointment_Date, a.Appointment_Status,
+        $stmt = $con->prepare("SELECT a.Appointment_ID, a.Appointment_Date, a.Appointment_Status, a.Appointment_End_Time,
                p.Patient_FN, p.Patient_LN, s.Service_Name
         FROM appointment a
         LEFT JOIN patient p ON a.Patient_ID = p.Patient_ID
@@ -349,6 +373,122 @@ class database
         $stmt->execute([$dentist_id]);
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
+
+    function getDentistCalendarByDentist($dentist_id)
+    {
+        $con = $this->opencon();
+        try {
+            $stmt = $con->prepare("SELECT Den_Calendar_ID, Dentist_ID, Schedule_Date, Start_Time, End_Time FROM dentist_calendar WHERE Dentist_ID = ? ORDER BY Schedule_Date ASC");
+            $stmt->execute([$dentist_id]);
+            return $stmt->fetchAll(PDO::FETCH_ASSOC);
+        } catch (PDOException $e) {
+            return [];
+        }
+    }
+
+    function saveDentistCalendarSchedule($dentist_id, $schedule_date, $start_time, $end_time)
+    {
+        $con = $this->opencon();
+        try {
+            $stmt = $con->prepare("INSERT INTO dentist_calendar (Dentist_ID, Schedule_Date, Start_Time, End_Time) VALUES (?, ?, ?, ?)");
+            $result = $stmt->execute([$dentist_id, $schedule_date, $start_time, $end_time]);
+            if ($result) {
+                return [
+                    'success' => true,
+                    'id' => $con->lastInsertId(),
+                    'message' => 'Schedule saved successfully'
+                ];
+            }
+            return ['success' => false, 'message' => 'Failed to save schedule'];
+        } catch (PDOException $e) {
+            return ['success' => false, 'message' => 'Error: ' . $e->getMessage()];
+        }
+    }
+
+    function isTimeSlotBooked($appointment_datetime)
+    {
+        $con = $this->opencon();
+        try {
+            // Extract date and time from the appointment datetime
+            $schedule_date = date('Y-m-d', strtotime($appointment_datetime));
+            $appointment_time = date('H:i', strtotime($appointment_datetime));
+            
+            // Check if there's already a booking in dentist_calendar that overlaps with this time
+            // A slot is considered booked if the requested time falls within any existing time slot
+            $stmt = $con->prepare("SELECT COUNT(*) as count FROM dentist_calendar 
+                WHERE Schedule_Date = ? 
+                AND Start_Time <= ? 
+                AND End_Time > ?
+            ");
+            $stmt->execute([$schedule_date, $appointment_time, $appointment_time]);
+            $result = $stmt->fetch(PDO::FETCH_ASSOC);
+            
+            return $result['count'] > 0;
+        } catch (PDOException $e) {
+            return false;
+        }
+    }
+
+    function updateAppointmentDateTime($appointment_id, $new_appointment_datetime)
+    {
+        $con = $this->opencon();
+        try {
+            $stmt = $con->prepare("UPDATE appointment SET Appointment_Date = ? WHERE Appointment_ID = ?");
+            return $stmt->execute([$new_appointment_datetime, $appointment_id]);
+        } catch (PDOException $e) {
+            throw new Exception("Failed to update appointment time: " . $e->getMessage());
+        }
+    }
+
+    function updateAppointmentEndTime($appointment_id, $end_datetime)
+    {
+        $con = $this->opencon();
+        try {
+            $con->beginTransaction();
+            
+            // Update the appointment end time
+            $stmt = $con->prepare("UPDATE appointment SET Appointment_End_Time = ? WHERE Appointment_ID = ?");
+            $stmt->execute([$end_datetime, $appointment_id]);
+            
+            // Get appointment details to save to dentist_calendar
+            $stmt_appt = $con->prepare("SELECT Dentist_ID, Appointment_Date FROM appointment WHERE Appointment_ID = ?");
+            $stmt_appt->execute([$appointment_id]);
+            $appointment = $stmt_appt->fetch(PDO::FETCH_ASSOC);
+            
+            if ($appointment && $appointment['Dentist_ID']) {
+                // Use the date from the appointment's original scheduled time (not the end_datetime date)
+                $schedule_date = date('Y-m-d', strtotime($appointment['Appointment_Date']));
+                // Use the appointment's scheduled time as the start time
+                $start_time = date('H:i', strtotime($appointment['Appointment_Date']));
+                // Extract only the time from the end_datetime (what employee entered as end time)
+                $end_time = date('H:i', strtotime($end_datetime));
+                
+                // Check if this appointment slot already exists in dentist_calendar
+                $stmt_check = $con->prepare("SELECT Den_Calendar_ID FROM dentist_calendar WHERE Dentist_ID = ? AND Schedule_Date = ? AND Start_Time = ?");
+                $stmt_check->execute([$appointment['Dentist_ID'], $schedule_date, $start_time]);
+                $existing = $stmt_check->fetch(PDO::FETCH_ASSOC);
+                
+                if (!$existing) {
+                    // Save to dentist_calendar with the date/time from the appointment and end time from the form
+                    $stmt_cal = $con->prepare("INSERT INTO dentist_calendar (Dentist_ID, Schedule_Date, Start_Time, End_Time) VALUES (?, ?, ?, ?)");
+                    $stmt_cal->execute([$appointment['Dentist_ID'], $schedule_date, $start_time, $end_time]);
+                } else {
+                    // Update existing entry if found
+                    $stmt_update = $con->prepare("UPDATE dentist_calendar SET End_Time = ? WHERE Den_Calendar_ID = ?");
+                    $stmt_update->execute([$end_time, $existing['Den_Calendar_ID']]);
+                }
+            }
+            
+            $con->commit();
+            return true;
+        } catch (PDOException $e) {
+            if ($con->inTransaction()) {
+                $con->rollBack();
+            }
+            throw new Exception("Failed to update appointment end time: " . $e->getMessage());
+        }
+    }
+
     function getPatientPrescriptions($patient_id)
     {
         $con = $this->opencon();

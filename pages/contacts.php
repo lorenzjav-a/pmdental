@@ -23,29 +23,35 @@ if (isset($_POST['submit_request'])) {
     // Normalize the datetime-local value for MySQL DATETIME storage
     $appointment_datetime = date('Y-m-d H:i:s', strtotime(str_replace('T', ' ', $appointment_date)));
 
-    try {
-        $con->createAppointmentRequest(
-            $fullname,
-            $email,
-            $phone,
-            $birthday,
-            $gender,
-            $appointment_datetime,
-            $service_id
-        );
-
-        $showData = true;
-        $dbStatus = "success";
-        $dbMessage = "Your booking request has been forwarded to our desk successfully.";
-
-        header("refresh:10;url=index.php");
-    } catch (PDOException $e) {
-
+    // Check if the requested time slot is already booked
+    if ($con->isTimeSlotBooked($appointment_datetime)) {
         $dbStatus = "error";
-        $dbMessage = "Invalid service selected. Please try again.";
+        $dbMessage = "The requested date and time slot is already booked. Please choose another date or time.";
+    } else {
+        try {
+            $con->createAppointmentRequest(
+                $fullname,
+                $email,
+                $phone,
+                $birthday,
+                $gender,
+                $appointment_datetime,
+                $service_id
+            );
 
-        // For debugging:
-        // echo $e->getMessage();
+            $showData = true;
+            $dbStatus = "success";
+            $dbMessage = "Your booking request has been forwarded to our desk successfully.";
+
+            header("refresh:10;url=index.php");
+        } catch (PDOException $e) {
+
+            $dbStatus = "error";
+            $dbMessage = "Invalid service selected. Please try again.";
+
+            // For debugging:
+            // echo $e->getMessage();
+        }
     }
 }
 
@@ -62,6 +68,8 @@ if (isset($_POST['submit_request'])) {
 
             <?php if (!empty($dbMessage) && $dbStatus == 'error'): ?>
                 <div class="alert alert-danger mb-3 small"><?= $dbMessage; ?></div>
+            <?php elseif (!empty($dbMessage) && $dbStatus == 'success'): ?>
+                <div class="alert alert-success mb-3 small"><?= $dbMessage; ?></div>
             <?php endif; ?>
 
             <form method="POST" class="card p-4 shadow-sm border-0 bg-white">

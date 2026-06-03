@@ -1,4 +1,4 @@
-﻿<?php
+<?php
 session_start();
 require_once('../class/database.php');
 $db = new database();
@@ -15,7 +15,7 @@ if (isset($_POST['update_appointment_end_time'])) {
     
     // Validate that both date and time are provided
     if (empty($end_date) || empty($end_time)) {
-        header('Location: calendar.php?error=' . urlencode('Date and time are required'));
+        header('Location: employee-calendar.php?error=' . urlencode('Date and time are required'));
         exit();
     }
     
@@ -27,10 +27,10 @@ if (isset($_POST['update_appointment_end_time'])) {
     
     try {
         $db->updateAppointmentEndTime($appointment_id, $end_datetime);
-        header('Location: calendar.php?success=1');
+        header('Location: employee-calendar.php?success=1');
         exit();
     } catch (Exception $e) {
-        header('Location: calendar.php?error=' . urlencode($e->getMessage()));
+        header('Location: employee-calendar.php?error=' . urlencode($e->getMessage()));
         exit();
     }
 }
@@ -86,7 +86,7 @@ if (isset($_GET['fetch_dentist_calendar'], $_GET['dentist_id'])) {
 }
 
 $dentists = $db->viewDentists();
-$activePage = 'calendar';
+$activePage = 'dentist_rosters';
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -94,7 +94,7 @@ $activePage = 'calendar';
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Dentist Calendar - PM Dental Admin</title>
+    <title>Dentist Calendar - PM Dental Staff</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.11/index.global.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
@@ -106,7 +106,7 @@ $activePage = 'calendar';
             min-height: 100vh;
         }
 
-        #adminSidebar {
+        #employeeSidebar {
             position: fixed;
             top: 0;
             left: 0;
@@ -119,7 +119,7 @@ $activePage = 'calendar';
             padding-top: 1.5rem;
         }
 
-        #adminSidebar .sidebar-brand {
+        #employeeSidebar .sidebar-brand {
             font-size: 1.25rem;
             font-weight: 700;
             padding: 0 1.5rem;
@@ -128,11 +128,11 @@ $activePage = 'calendar';
             color: #fff;
         }
 
-        #adminSidebar .sidebar-links {
+        #employeeSidebar .sidebar-links {
             padding: 0 1.2rem;
         }
 
-        #adminSidebar .sidebar-links a {
+        #employeeSidebar .sidebar-links a {
             display: block;
             color: #d6d6d6;
             padding: 0.9rem 0.75rem;
@@ -142,8 +142,8 @@ $activePage = 'calendar';
             transition: background 0.2s, color 0.2s;
         }
 
-        #adminSidebar .sidebar-links a.active,
-        #adminSidebar .sidebar-links a:hover {
+        #employeeSidebar .sidebar-links a.active,
+        #employeeSidebar .sidebar-links a:hover {
             background: #1b263b;
             color: #fff;
         }
@@ -288,104 +288,8 @@ $activePage = 'calendar';
             box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
         }
 
-        #dentistCalendar {
-            border-radius: 10px;
-            flex: 1;
-            min-height: 0;
-        }
-
-        .page-title {
-            font-size: 1.5rem;
-            font-weight: 700;
-            color: #1f2937;
-            margin-bottom: 0.25rem;
-        }
-
-        .page-description {
-            color: #6b7280;
-            font-size: 0.9rem;
-            margin-top: 0.2rem;
-            margin-bottom: 0;
-        }
-
-        .calendar-legend {
-            display: flex;
-            gap: 16px;
-            flex-wrap: wrap;
-            margin-bottom: 12px;
-            padding: 10px;
-            background: #f9fafb;
-            border-radius: 8px;
-            border: 1px solid #e5e7eb;
-            font-size: 0.85rem;
-            flex-shrink: 0;
-        }
-
-        .legend-item {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-        }
-
-        .legend-color {
-            width: 18px;
-            height: 18px;
-            border-radius: 4px;
-            border: 2px solid;
-            flex-shrink: 0;
-        }
-
-        .legend-confirmed {
-            background: #198754;
-            border-color: #155724;
-        }
-
-        .legend-pending {
-            background: #ffc107;
-            border-color: #ff9800;
-        }
-
-        .legend-available {
-            background: rgba(13, 110, 253, 0.3);
-            border-color: #0b5ed7;
-        }
-
-        .dentist-selector-row {
-            background: #fafbfc;
-            padding: 12px;
-            border-radius: 8px;
-            border: 1px solid #e5e7eb;
-            margin-bottom: 12px;
-            flex-shrink: 0;
-        }
-
-        .dentist-selector-label {
-            font-size: 0.95rem;
-            font-weight: 600;
-            color: #374151;
-            margin-bottom: 0.5rem;
-        }
-
-        .dentist-selector-description {
-            font-size: 0.85rem;
-            color: #6b7280;
-            margin-bottom: 0;
-        }
-
-        .form-select {
-            border: 1px solid #d1d5db;
-            border-radius: 6px;
-            padding: 0.6rem 0.875rem;
-            font-size: 0.95rem;
-        }
-
-        .form-select:focus {
-            border-color: #3b82f6;
-            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
-        }
-
         @media (max-width: 992px) {
-            #adminSidebar {
+            #employeeSidebar {
                 position: relative;
                 height: auto;
                 width: 100%;
@@ -446,18 +350,18 @@ $activePage = 'calendar';
 </head>
 
 <body>
-    <?php include 'admin-sidebar.php'; ?>
+    <?php include 'employee-sidebar.php'; ?>
     
     <nav class="navbar navbar-expand-lg bg-white border-bottom sticky-top">
         <div class="container-fluid px-4">
-            <a class="navbar-brand fw-semibold" href="admin-dashboard.php">PM Dental Admin</a>
+            <a class="navbar-brand fw-semibold" href="employee-dashboard.php">PM Dental Staff</a>
             <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navStatic">
                 <span class="navbar-toggler-icon"></span>
             </button>
             <div id="navStatic" class="collapse navbar-collapse">
                 <ul class="navbar-nav me-auto gap-lg-1">
-                    <li class="nav-item"><a class="nav-link" href="admin-dashboard.php">Home</a></li>
-                    <li class="nav-item"><a class="nav-link active" href="calendar.php">Calendar</a></li>
+                    <li class="nav-item"><a class="nav-link" href="employee-dashboard.php">Home</a></li>
+                    <li class="nav-item"><a class="nav-link active" href="employee-calendar.php">Calendar</a></li>
                 </ul>
                 <div class="d-flex align-items-center gap-2">
                     <a class="btn btn-sm btn-outline-secondary" href="login.php">Logout</a>
@@ -469,7 +373,7 @@ $activePage = 'calendar';
     <div id="pageMain">
         <div class="row">
             <div class="col-12">
-                <div class="page-title"><i class="fa-solid fa-calendar-days me-2 text-primary"></i>Dentist Calendar</div>
+                <div class="page-title"><i class="fa-solid fa-calendar-days me-2 text-primary"></i>Dentist Schedule Calendar</div>
                 <p class="page-description">Select a dentist to view their confirmed and pending appointment schedule.</p>
             </div>
         </div>
@@ -523,7 +427,7 @@ $activePage = 'calendar';
                     <h5 class="modal-title fw-bold"><i class="fa-solid fa-check-circle me-2"></i>Record Appointment Completion</h5>
                     <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
                 </div>
-                <form action="calendar.php" method="POST">
+                <form action="employee-calendar.php" method="POST">
                     <div class="modal-body">
                         <input type="hidden" name="appointment_id" id="modal_appointment_id">
                         <div class="alert alert-info small mb-3">
@@ -620,7 +524,7 @@ $activePage = 'calendar';
                     return;
                 }
 
-                fetch('calendar.php?fetch_dentist_calendar=1&dentist_id=' + dentistId)
+                fetch('employee-calendar.php?fetch_dentist_calendar=1&dentist_id=' + dentistId)
                     .then(function(response) {
                         return response.json();
                     })
@@ -644,7 +548,7 @@ $activePage = 'calendar';
                     confirmButtonColor: '#3b82f6',
                     confirmButtonText: 'OK'
                 }).then(() => {
-                    window.location.href = 'calendar.php';
+                    window.location.href = 'employee-calendar.php';
                 });
             }
             if (urlParams.has('error')) {

@@ -21,8 +21,8 @@ if (!function_exists('sidebarActive')) {
         <a href="patient-profile-masterlist.php" class="<?= sidebarActive('patient_masterlist'); ?>">
             <i class="fa-solid fa-user-doctor me-2"></i>Patient Profile Masterlist
         </a>
-        <a href="dentist-schedule-rosters.php" class="<?= sidebarActive('dentist_rosters'); ?>">
-            <i class="fa-solid fa-calendar-days me-2"></i>Dentist Schedule Rosters
+        <a href="employee-calendar.php" class="<?= sidebarActive('employee_calendar'); ?>">
+            <i class="fa-solid fa-calendar-days me-2"></i>Calendar
         </a>
         <a href="login.php">
             <i class="fa-solid fa-arrow-right-from-bracket me-2"></i>Logout

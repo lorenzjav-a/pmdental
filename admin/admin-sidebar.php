@@ -12,10 +12,11 @@ if (!function_exists('sidebarActive')) {
 }
 ?>
 
-<div class="sidebar">
-    <h2>PM Dental</h2>
+<div id="adminSidebar">
+    <div class="sidebar-brand">PM Dental Admin</div>
 
-    <a href="admin-dashboard.php" class="<?= sidebarActive('dashboard'); ?>">
+    <div class="sidebar-links">
+        <a href="admin-dashboard.php" class="<?= sidebarActive('dashboard'); ?>">
         <i class="fas fa-chart-line"></i>
         Dashboard
     </a>
@@ -23,6 +24,11 @@ if (!function_exists('sidebarActive')) {
     <a href="users.php" class="<?= sidebarActive('users'); ?>">
         <i class="fas fa-users"></i>
         Users
+    </a>
+
+    <a href="admin-patient-profile-masterlist.php" class="<?= sidebarActive('patient_masterlist'); ?>">
+        <i class="fas fa-user-injured"></i>
+        Patient Masterlist
     </a>
 
     <a href="dentists.php" class="<?= sidebarActive('dentists'); ?>">
@@ -44,4 +50,5 @@ if (!function_exists('sidebarActive')) {
         <i class="fas fa-file"></i>
         Reports
     </a>
+    </div>
 </div>

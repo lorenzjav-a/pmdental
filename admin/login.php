@@ -38,7 +38,22 @@ if (isset($_POST['btnLogin'])) {
                 $_SESSION['email'] = $user['email'];
                 $_SESSION['account_type'] = $user['account_type'];
                 $_SESSION['admin_id'] = $user['id'];
-                $_SESSION['admin_name'] = $user['name'] ?? ($user['account_type'] == 1 ? 'Staff Member' : 'Attending Dentist');
+                
+                // Fetch the correct name based on account type
+                $admin_name = 'User';
+                if ($user['account_type'] == 1) {
+                    // Employee
+                    $admin_name = $user['name'] ?? 'Staff Member';
+                } elseif ($user['account_type'] == 2) {
+                    // Dentist - fetch dentist name
+                    $dentistInfo = $con->getDentistById($user['id']);
+                    if ($dentistInfo) {
+                        $admin_name = trim(($dentistInfo['Dentist_FN'] ?? '') . ' ' . ($dentistInfo['Dentist_LN'] ?? '')) ?: 'Attending Dentist';
+                    } else {
+                        $admin_name = 'Attending Dentist';
+                    }
+                }
+                $_SESSION['admin_name'] = $admin_name;
 
                 $loginStatus = "success";
                 $loginMessage = "Login successful!";
