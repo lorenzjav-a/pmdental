@@ -7,6 +7,7 @@ if (!function_exists('sidebarActive')) {
     function sidebarActive($page)
     {
         global $activePage;
+        
         return ($activePage === $page) ? 'active' : '';
     }
 }

@@ -19,11 +19,10 @@ if (isset($_POST['update_appointment_end_time'])) {
         exit();
     }
     
-    // Debug: log the received values
-    error_log("DEBUG: end_date='$end_date', end_time='$end_time'");
+    
     
     $end_datetime = date('Y-m-d H:i:s', strtotime($end_date . ' ' . $end_time));
-    error_log("DEBUG: Constructed end_datetime='$end_datetime'");
+    
     
     try {
         $db->updateAppointmentEndTime($appointment_id, $end_datetime);
@@ -62,25 +61,7 @@ if (isset($_GET['fetch_dentist_calendar'], $_GET['dentist_id'])) {
         ];
     }
     
-    // Add calendar schedule slots
-    foreach ($calendar_events as $cal) {
-        $start_datetime = $cal['Schedule_Date'] . ' ' . $cal['Start_Time'];
-        $end_datetime = $cal['Schedule_Date'] . ' ' . $cal['End_Time'];
-        $events[] = [
-            'id' => 'cal_' . $cal['Den_Calendar_ID'],
-            'title' => 'Available Slot',
-            'start' => $start_datetime,
-            'end' => $end_datetime,
-            'color' => '#0d6efd',
-            'borderColor' => '#0b5ed7',
-            'backgroundColor' => 'rgba(13, 110, 253, 0.3)',
-            'extendedProps' => [
-                'type' => 'calendar_slot',
-                'start_time' => $cal['Start_Time'],
-                'end_time' => $cal['End_Time']
-            ]
-        ];
-    }
+    
     echo json_encode($events);
     exit();
 }
@@ -249,11 +230,6 @@ $activePage = 'dentist_rosters';
             border-color: #ff9800;
         }
 
-        .legend-available {
-            background: rgba(13, 110, 253, 0.3);
-            border-color: #0b5ed7;
-        }
-
         .dentist-selector-row {
             background: #fafbfc;
             padding: 12px;
@@ -406,10 +382,6 @@ $activePage = 'dentist_rosters';
                         <div class="legend-item">
                             <div class="legend-color legend-pending"></div>
                             <span>Pending Appointment</span>
-                        </div>
-                        <div class="legend-item">
-                            <div class="legend-color legend-available"></div>
-                            <span>Available Time Slot</span>
                         </div>
                     </div>
 

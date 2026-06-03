@@ -204,18 +204,6 @@ class database
         }
     }
 
-    function getDentistCalendarEvents()
-    {
-        $con = $this->opencon();
-        try {
-            $stmt = $con->prepare('SELECT Den_Calendar_ID, Dentist_ID, Schedule_Date, Start_Time, End_Time FROM dentist_calendar ORDER BY Schedule_Date ASC');
-            $stmt->execute();
-            return $stmt->fetchAll(PDO::FETCH_ASSOC);
-        } catch (PDOException $e) {
-            return [];
-        }
-    }
-
     function viewPatients()
     {
         $con = $this->opencon();
@@ -343,13 +331,13 @@ class database
         $con = $this->opencon();
         try {
             $con->beginTransaction();
-            
+
             // Update appointment to confirm
             $stmt = $con->prepare("UPDATE appointment SET Employee_ID=?, Dentist_ID=?, Appointment_Status='Confirmed', Appointment_Date=Appointment_Date
             WHERE Appointment_ID=?
         ");
             $stmt->execute([$employee_id, $dentist_id, $appointment_id]);
-            
+
             $con->commit();
             return true;
         } catch (PDOException $e) {
@@ -383,12 +371,12 @@ class database
             $stmt = $con->prepare("SELECT Den_Calendar_ID, Dentist_ID, Schedule_Date, Start_Time, End_Time FROM dentist_calendar WHERE Dentist_ID = ? ORDER BY Schedule_Date ASC");
             $stmt->execute([$dentist_id]);
             $calendar_slots = $stmt->fetchAll(PDO::FETCH_ASSOC);
-            
+
             // Enhance calendar slots with appointment information (including patient email) if available
             foreach ($calendar_slots as &$slot) {
                 $slot_start = $slot['Schedule_Date'] . ' ' . $slot['Start_Time'];
                 $slot_end = $slot['Schedule_Date'] . ' ' . $slot['End_Time'];
-                
+
                 // Check for appointments that fall within this time slot
                 $stmt_appt = $con->prepare("SELECT a.Appointment_ID, p.Patient_ID, p.Patient_FN, p.Patient_LN, p.Patient_PhoneNo, p.Patient_Email, s.Service_Name 
                     FROM appointment a 
@@ -398,7 +386,7 @@ class database
                     WHERE a.Dentist_ID = ? AND a.Appointment_Date >= ? AND a.Appointment_Date < ? AND a.Appointment_Status IN ('Pending', 'Confirmed')");
                 $stmt_appt->execute([$dentist_id, $slot_start, $slot_end]);
                 $appointment = $stmt_appt->fetch(PDO::FETCH_ASSOC);
-                
+
                 if ($appointment) {
                     $slot['Appointment_ID'] = $appointment['Appointment_ID'];
                     $slot['Patient_ID'] = $appointment['Patient_ID'];
@@ -409,29 +397,10 @@ class database
                     $slot['Service_Name'] = $appointment['Service_Name'];
                 }
             }
-            
+
             return $calendar_slots;
         } catch (PDOException $e) {
             return [];
-        }
-    }
-
-    function saveDentistCalendarSchedule($dentist_id, $schedule_date, $start_time, $end_time)
-    {
-        $con = $this->opencon();
-        try {
-            $stmt = $con->prepare("INSERT INTO dentist_calendar (Dentist_ID, Schedule_Date, Start_Time, End_Time) VALUES (?, ?, ?, ?)");
-            $result = $stmt->execute([$dentist_id, $schedule_date, $start_time, $end_time]);
-            if ($result) {
-                return [
-                    'success' => true,
-                    'id' => $con->lastInsertId(),
-                    'message' => 'Schedule saved successfully'
-                ];
-            }
-            return ['success' => false, 'message' => 'Failed to save schedule'];
-        } catch (PDOException $e) {
-            return ['success' => false, 'message' => 'Error: ' . $e->getMessage()];
         }
     }
 
@@ -442,7 +411,7 @@ class database
             // Extract date and time from the appointment datetime
             $schedule_date = date('Y-m-d', strtotime($appointment_datetime));
             $appointment_time = date('H:i', strtotime($appointment_datetime));
-            
+
             // Check if there's already a booking in dentist_calendar that overlaps with this time
             // A slot is considered booked if the requested time falls within any existing time slot
             $stmt = $con->prepare("SELECT COUNT(*) as count FROM dentist_calendar 
@@ -452,7 +421,7 @@ class database
             ");
             $stmt->execute([$schedule_date, $appointment_time, $appointment_time]);
             $result = $stmt->fetch(PDO::FETCH_ASSOC);
-            
+
             return $result['count'] > 0;
         } catch (PDOException $e) {
             return false;
@@ -475,16 +444,16 @@ class database
         $con = $this->opencon();
         try {
             $con->beginTransaction();
-            
+
             // Update the appointment end time
             $stmt = $con->prepare("UPDATE appointment SET Appointment_End_Time = ? WHERE Appointment_ID = ?");
             $stmt->execute([$end_datetime, $appointment_id]);
-            
+
             // Get appointment details to save to dentist_calendar
             $stmt_appt = $con->prepare("SELECT Dentist_ID, Appointment_Date FROM appointment WHERE Appointment_ID = ?");
             $stmt_appt->execute([$appointment_id]);
             $appointment = $stmt_appt->fetch(PDO::FETCH_ASSOC);
-            
+
             if ($appointment && $appointment['Dentist_ID']) {
                 // Use the date from the appointment's original scheduled time (not the end_datetime date)
                 $schedule_date = date('Y-m-d', strtotime($appointment['Appointment_Date']));
@@ -492,12 +461,12 @@ class database
                 $start_time = date('H:i', strtotime($appointment['Appointment_Date']));
                 // Extract only the time from the end_datetime (what employee entered as end time)
                 $end_time = date('H:i', strtotime($end_datetime));
-                
+
                 // Check if this appointment slot already exists in dentist_calendar
                 $stmt_check = $con->prepare("SELECT Den_Calendar_ID FROM dentist_calendar WHERE Dentist_ID = ? AND Schedule_Date = ? AND Start_Time = ?");
                 $stmt_check->execute([$appointment['Dentist_ID'], $schedule_date, $start_time]);
                 $existing = $stmt_check->fetch(PDO::FETCH_ASSOC);
-                
+
                 if (!$existing) {
                     // Save to dentist_calendar with the date/time from the appointment and end time from the form
                     $stmt_cal = $con->prepare("INSERT INTO dentist_calendar (Dentist_ID, Schedule_Date, Start_Time, End_Time) VALUES (?, ?, ?, ?)");
@@ -508,7 +477,7 @@ class database
                     $stmt_update->execute([$end_time, $existing['Den_Calendar_ID']]);
                 }
             }
-            
+
             $con->commit();
             return true;
         } catch (PDOException $e) {
@@ -519,31 +488,7 @@ class database
         }
     }
 
-    function getPatientPrescriptions($patient_id)
-    {
-        $con = $this->opencon();
-        try {
-            $query = "SELECT 
-                        pi.Item_Name, 
-                        pi.Item_Quantity, 
-                        pi.Pres_Dosage,
-                        a.Appointment_Date,
-                        d.Dentist_FN,
-                        d.Dentist_LN
-                      FROM prescription_items pi
-                      INNER JOIN prescription pr ON pi.Prescription_ID = pr.Prescription_ID
-                      INNER JOIN appointment a ON pr.Appointment_ID = a.Appointment_ID
-                      LEFT JOIN dentist d ON a.Dentist_ID = d.Dentist_ID
-                      WHERE a.Patient_ID = ?
-                      ORDER BY a.Appointment_Date DESC";
-
-            $stmt = $con->prepare($query);
-            $stmt->execute([$patient_id]);
-            return $stmt->fetchAll(PDO::FETCH_ASSOC);
-        } catch (PDOException $e) {
-            return [];
-        }
-    }
+    
 
     /**
      * Updates an existing billing statement or handles checking out/logging payments 
@@ -646,24 +591,8 @@ class database
         }
     }
 
-    /**
-     * EMPLOYEE SIDE USE: Fetches prescription items logged by the Dentist
-     */
-    function getPrescriptionItemsByAppointment($appointment_id)
-    {
-        $con = $this->opencon();
-        try {
-            // Joins prescription items back to prescription using your table maps
-            $stmt = $con->prepare("SELECT pi.Item_Name, pi.Item_Quantity, pi.Pres_Dosage 
-                                   FROM prescription_items pi
-                                   JOIN prescription p ON pi.Prescription_ID = p.Prescription_ID
-                                   WHERE p.Appointment_ID = ?");
-            $stmt->execute([$appointment_id]);
-            return $stmt->fetchAll(PDO::FETCH_ASSOC);
-        } catch (PDOException $e) {
-            return [];
-        }
-    }
+    
+   
     function getPrescriptionItemsByPatient($patient_id)
     {
         $con = $this->opencon();
@@ -690,12 +619,12 @@ class database
         try {
             $con->beginTransaction();
 
-            // 1. Insert parent prescription record
+            //Insert parent prescription record
             $stmt_pres = $con->prepare("INSERT INTO prescription (Appointment_ID) VALUES (?)");
             $stmt_pres->execute([$appointment_id]);
             $prescription_id = $con->lastInsertId();
 
-            // 2. Insert individual items matching your structural schema rules
+            //Insert individual items matching your structural schema rules
             $stmt_item = $con->prepare("INSERT INTO prescription_items (Prescription_ID, Item_Name, Item_Quantity, Pres_Dosage) VALUES (?, ?, ?, ?)");
 
             foreach ($items as $item) {
@@ -829,13 +758,12 @@ class database
         try {
             $con->beginTransaction();
 
-            // Update appointment status to Cancelled
+            
             $stmt = $con->prepare("UPDATE appointment SET Appointment_Status = 'Cancelled' WHERE Appointment_ID = ?");
             $stmt->execute([$appointment_id]);
 
-            // If there's a reason, you could log it in a separate table if needed
-            // For now, we're just updating the status
-            
+           
+
             $con->commit();
             return true;
         } catch (PDOException $e) {

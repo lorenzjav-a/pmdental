@@ -476,21 +476,21 @@ $pendingRequests = $db->countAppointments('Pending');
                                         </td>
                                     </tr>
                                 <?php else: ?>
-                                    <?php foreach (array_slice($allAppointments, 0, 6) as $app): ?>
+                                    <?php foreach (array_slice($allAppointments,0) as $appointment): ?>
                                         <tr>
                                             <td class="fw-bold text-dark">
-                                                <?= htmlspecialchars(($app['Patient_FN'] ?? '') . ' ' . ($app['Patient_LN'] ?? '')); ?>
+                                                <?= htmlspecialchars(($appointment['Patient_FN'] ?? '') . ' ' . ($appointment['Patient_LN'] ?? '')); ?>
                                             </td>
 
 
                                             <td class="small text-muted">
-                                                <?= !empty($app['Appointment_Date']) ? date('M d, Y - h:i A', strtotime($app['Appointment_Date'])) : '-'; ?>
+                                                <?= !empty($appointment['Appointment_Date']) ? date('M d, Y - h:i A', strtotime($appointment['Appointment_Date'])) : '-'; ?>
                                             </td>
 
 
                                             <td>
                                                 <?php
-                                                $status = $app['Appointment_Status'] ?? 'Unknown';
+                                                $status = $appointment['Appointment_Status'] ?? 'Unknown';
                                                 $badge = ($status === 'Confirmed') ? 'bg-success' : (($status === 'Pending') ? 'bg-warning text-dark' : 'bg-danger');
                                                 ?>
                                                 <span class="badge <?= $badge; ?>"><?= htmlspecialchars($status); ?></span>
@@ -500,16 +500,16 @@ $pendingRequests = $db->countAppointments('Pending');
                                             <td class="text-end">
                                                 <div class="btn-group gap-1">
 
-                                                    <a href="users.php?patient_id=<?= $app['Patient_ID'] ?? 0; ?>"
+                                                    <a href="users.php?patient_id=<?= $appointment['Patient_ID'] ?? 0; ?>"
                                                         class="btn btn-sm btn-light border text-primary">
                                                         <i class="fa-solid fa-folder-medical"></i> View Chart
                                                     </a>
 
                                                     <button type="button" 
                                                         class="btn btn-sm btn-primary write-rx-btn"
-                                                        data-appt-id="<?= $app['Appointment_ID'] ?? 0; ?>"
-                                                        data-patient-id="<?= $app['Patient_ID'] ?? 0; ?>"
-                                                        data-patient-fullname="<?= htmlspecialchars(($app['Patient_FN'] ?? '') . ' ' . ($app['Patient_LN'] ?? '')); ?>">
+                                                        data-appt-id="<?= $appointment['Appointment_ID'] ?? 0; ?>"
+                                                        data-patient-id="<?= $appointment['Patient_ID'] ?? 0; ?>"
+                                                        data-patient-fullname="<?= htmlspecialchars(($appointment['Patient_FN'] ?? '') . ' ' . ($appointment['Patient_LN'] ?? '')); ?>">
                                                         <i class="fa-solid fa-pills me-1"></i> + Rx
                                                     </button>
 
