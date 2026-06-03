@@ -65,6 +65,26 @@ if (isset($_POST['execute_checkout'])) {
         $alertMessage = $e->getMessage();
     }
 }
+
+if (isset($_POST['cancel_appointment_btn'])) {
+    $appointment_id = (int)$_POST['appointment_id_to_cancel'];
+    $cancellation_reason = trim($_POST['cancellation_reason'] ?? '');
+
+    try {
+        if (empty($appointment_id)) {
+            throw new Exception("Invalid appointment ID.");
+        }
+
+        $con->cancelAppointment($appointment_id, $cancellation_reason);
+
+        $alertStatus = 'success';
+        $alertMessage = 'Appointment cancelled successfully!';
+        $allAppointments = $con->viewAppointments();
+    } catch (Exception $e) {
+        $alertStatus = 'error';
+        $alertMessage = $e->getMessage();
+    }
+}
 ?>
 <!doctype html>
 <html lang="en">
@@ -131,18 +151,19 @@ if (isset($_POST['execute_checkout'])) {
               </thead>
               <tbody>
                 <?php if (empty($allAppointments) || !is_array($allAppointments)): ?>
-                  <tr><td colspan="8" class="text-center text-muted py-4">No appointments found.</td></tr>
+                  <tr><td colspan="9" class="text-center text-muted py-4">No appointments found.</td></tr>
                 <?php else: ?>
                   <?php foreach ($allAppointments as $app):
                     $paymentStatus = strtolower($app['Payment_Status'] ?? 'pending');
                     $appointmentStatus = strtolower($app['Appointment_Status'] ?? 'pending');
-                    $statusBadge = $appointmentStatus === 'confirmed' ? 'bg-success' : ($appointmentStatus === 'completed' ? 'bg-secondary text-white' : 'bg-warning text-dark');
+                    $statusBadge = $appointmentStatus === 'confirmed' ? 'bg-success' : ($appointmentStatus === 'completed' ? 'bg-secondary text-white' : ($appointmentStatus === 'cancelled' ? 'bg-danger' : 'bg-warning text-dark'));
                     $fullName = htmlspecialchars(($app['Patient_FN'] ?? '') . ' ' . ($app['Patient_LN'] ?? ''));
                     $serviceName = !empty($app['Service_Name']) ? $app['Service_Name'] : 'Not Specified';
                     $checkoutDisabled = $paymentStatus === 'paid' || $appointmentStatus === 'completed';
                     $checkoutButtonClass = $checkoutDisabled ? 'btn btn-sm btn-success px-2 disabled' : 'btn btn-sm btn-success px-2';
                     $checkoutButtonLabel = $checkoutDisabled ? 'Settled' : 'Checkout';
                     $showMatchButton = !in_array($appointmentStatus, ['confirmed', 'completed'], true);
+                    $allButtonsDisabled = in_array($appointmentStatus, ['cancelled', 'completed'], true);
                   ?>
                     <tr>
                       <td>#<?= $app['Appointment_ID']; ?></td>
@@ -153,15 +174,22 @@ if (isset($_POST['execute_checkout'])) {
                       <td><?= !empty($app['Appointment_Date']) ? date('M d, Y - h:i A', strtotime($app['Appointment_Date'])) : 'Unscheduled'; ?></td>
                       <td><span class="badge <?= $statusBadge; ?>"><?= htmlspecialchars($app['Appointment_Status'] ?? 'Pending'); ?></span></td>
                       <td class="text-end d-flex justify-content-end gap-1">
-                        <?php if ($showMatchButton): ?>
-                          <button type="button" class="btn btn-sm btn-primary px-2" data-bs-toggle="modal" data-bs-target="#assignModal" data-app-id="<?= $app['Appointment_ID']; ?>" data-patient-name="<?= $fullName; ?>" data-app-date="<?= htmlspecialchars($app['Appointment_Date']); ?>">Match Dentist</button>
+                        <?php if ($allButtonsDisabled): ?>
+                          <button type="button" class="btn btn-sm btn-primary px-2 disabled" disabled>Match Dentist</button>
+                          <button type="button" class="btn btn-sm btn-success px-2 disabled" disabled>Checkout</button>
+                          <button type="button" class="btn btn-sm btn-danger px-2 disabled" disabled><i class="fa-solid fa-times"></i></button>
                         <?php else: ?>
-                          <button class="btn btn-sm btn-outline-secondary px-2" disabled><?= $appointmentStatus === 'completed' ? 'Completed' : 'Assigned'; ?></button>
-                        <?php endif; ?>
-                        <?php if ($checkoutDisabled): ?>
-                          <button type="button" class="btn btn-sm btn-success px-2 disabled" disabled>Settled</button>
-                        <?php else: ?>
-                          <button type="button" class="btn btn-sm btn-success px-2" data-bs-toggle="modal" data-bs-target="#checkoutModal" data-app-id="<?= $app['Appointment_ID']; ?>" data-patient-name="<?= $fullName; ?>" data-service="<?= htmlspecialchars($serviceName); ?>" data-amount="<?= ($app['Payment_Amount'] ?? $app['Service_Fee'] ?? 0); ?>" data-method="<?= htmlspecialchars($app['Payment_Method'] ?? 'Cash'); ?>" data-payment-status="<?= htmlspecialchars($app['Payment_Status'] ?? 'Pending'); ?>" data-app-status="<?= htmlspecialchars($app['Appointment_Status'] ?? 'Pending'); ?>">Checkout</button>
+                          <?php if ($showMatchButton): ?>
+                            <button type="button" class="btn btn-sm btn-primary px-2" data-bs-toggle="modal" data-bs-target="#assignModal" data-app-id="<?= $app['Appointment_ID']; ?>" data-patient-name="<?= $fullName; ?>" data-app-date="<?= htmlspecialchars($app['Appointment_Date']); ?>">Match Dentist</button>
+                          <?php else: ?>
+                            <button class="btn btn-sm btn-outline-secondary px-2" disabled><?= $appointmentStatus === 'completed' ? 'Completed' : 'Assigned'; ?></button>
+                          <?php endif; ?>
+                          <?php if ($checkoutDisabled): ?>
+                            <button type="button" class="btn btn-sm btn-success px-2 disabled" disabled>Settled</button>
+                          <?php else: ?>
+                            <button type="button" class="btn btn-sm btn-success px-2" data-bs-toggle="modal" data-bs-target="#checkoutModal" data-app-id="<?= $app['Appointment_ID']; ?>" data-patient-name="<?= $fullName; ?>" data-service="<?= htmlspecialchars($serviceName); ?>" data-amount="<?= ($app['Payment_Amount'] ?? $app['Service_Fee'] ?? 0); ?>" data-method="<?= htmlspecialchars($app['Payment_Method'] ?? 'Cash'); ?>" data-payment-status="<?= htmlspecialchars($app['Payment_Status'] ?? 'Pending'); ?>" data-app-status="<?= htmlspecialchars($app['Appointment_Status'] ?? 'Pending'); ?>">Checkout</button>
+                          <?php endif; ?>
+                          <button type="button" class="btn btn-sm btn-danger px-2" data-bs-toggle="modal" data-bs-target="#cancelModal" onclick="setCancelAppointmentQueue(<?= htmlspecialchars($app['Appointment_ID']); ?>, '<?= htmlspecialchars($fullName); ?>')"><i class="fa-solid fa-times"></i></button>
                         <?php endif; ?>
                       </td>
                     </tr>
@@ -256,6 +284,30 @@ if (isset($_POST['execute_checkout'])) {
             <div class="col-6"><button type="button" class="btn btn-light w-100" data-bs-dismiss="modal">Cancel</button></div>
             <div class="col-6"><button type="submit" name="execute_checkout" class="btn btn-success w-100">Settle Bill</button></div>
           </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- Cancel Appointment Modal -->
+  <div class="modal fade" id="cancelModal" tabindex="-1" aria-labelledby="cancelModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+      <div class="modal-content">
+        <div class="modal-header bg-danger text-white">
+          <h5 class="modal-title" id="cancelModalLabel">Cancel Appointment</h5>
+          <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <form action="patient-appointments-queue.php" method="POST">
+          <div class="modal-body">
+            <p><strong>Patient:</strong> <span id="cancelPatientNameQueue"></span></p>
+            <label for="cancellationReasonQueue" class="form-label">Cancellation Reason (Optional)</label>
+            <textarea class="form-control" id="cancellationReasonQueue" name="cancellation_reason" rows="4" placeholder="Enter reason for cancellation..."></textarea>
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+            <button type="submit" name="cancel_appointment_btn" class="btn btn-danger">Confirm Cancellation</button>
+          </div>
+          <input type="hidden" name="appointment_id_to_cancel" id="appointmentIdToCancelQueue">
         </form>
       </div>
     </div>
@@ -418,13 +470,19 @@ if (isset($_POST['execute_checkout'])) {
         if (!noResultsRow) {
           noResultsRow = document.createElement('tr');
           noResultsRow.id = noResultsRowId;
-          noResultsRow.innerHTML = '<td colspan="8" class="text-center text-muted py-4">No matching records found.</td>';
+          noResultsRow.innerHTML = '<td colspan="9" class="text-center text-muted py-4">No matching records found.</td>';
           table.querySelector('tbody').appendChild(noResultsRow);
         }
       });
     }
 
     installTableSearch('appointmentsSearch', 'appointmentsTable');
+
+    function setCancelAppointmentQueue(appointmentId, patientName) {
+      document.getElementById('appointmentIdToCancelQueue').value = appointmentId;
+      document.getElementById('cancelPatientNameQueue').textContent = patientName;
+      document.getElementById('cancellationReasonQueue').value = '';
+    }
 
     const alertMsgStatus = <?php echo json_encode($alertStatus); ?>;
     const alertMsgText = <?php echo json_encode($alertMessage); ?>;

@@ -119,8 +119,8 @@ class database
             $last_name = isset($name_parts[1]) ? $name_parts[1] : 'Patient';
 
             // Always create a new patient record for each appointment request
-            $stmt_pat = $con->prepare("INSERT INTO patient (Patient_FN, Patient_LN, Patient_PhoneNo, Patient_BirthDate, Patient_Gender) VALUES (?, ?, ?, ?, ?)");
-            $stmt_pat->execute([$first_name, $last_name, $phone, $birthday, $gender]);
+            $stmt_pat = $con->prepare("INSERT INTO patient (Patient_FN, Patient_LN, Patient_PhoneNo, Patient_BirthDate, Patient_Gender, Patient_Email) VALUES (?, ?, ?, ?, ?, ?)");
+            $stmt_pat->execute([$first_name, $last_name, $phone, $birthday, $gender, $email]);
             $patient_id = $con->lastInsertId();
 
             $stmt_app = $con->prepare("INSERT INTO appointment (Patient_ID, Employee_ID, Dentist_ID, Appointment_Date, Appointment_Status) VALUES (?, NULL, NULL, ?, 'Pending')");
@@ -158,6 +158,7 @@ class database
                     p.Patient_BirthDate,
                     p.Patient_Gender,
                     p.Patient_PhoneNo,
+                    p.Patient_Email,
                     d.Dentist_FN, 
                     d.Dentist_LN,
                     s.Service_ID,
@@ -226,7 +227,8 @@ class database
                     Patient_LN, 
                     Patient_BirthDate, 
                     Patient_Gender, 
-                    Patient_PhoneNo 
+                    Patient_PhoneNo,
+                    Patient_Email
                   FROM patient 
                   ORDER BY Patient_ID DESC";
 
@@ -361,7 +363,7 @@ class database
     {
         $con = $this->opencon();
         $stmt = $con->prepare("SELECT a.Appointment_ID, a.Appointment_Date, a.Appointment_Status, a.Appointment_End_Time,
-               p.Patient_FN, p.Patient_LN, s.Service_Name
+               p.Patient_ID, p.Patient_FN, p.Patient_LN, p.Patient_PhoneNo, p.Patient_Email, s.Service_Name
         FROM appointment a
         LEFT JOIN patient p ON a.Patient_ID = p.Patient_ID
         LEFT JOIN appointment_service asv ON a.Appointment_ID = asv.Appointment_ID
@@ -791,5 +793,28 @@ class database
             $valid_from,
             $valid_to
         ]);
+    }
+
+    function cancelAppointment($appointment_id, $cancellation_reason = '')
+    {
+        $con = $this->opencon();
+        try {
+            $con->beginTransaction();
+
+            // Update appointment status to Cancelled
+            $stmt = $con->prepare("UPDATE appointment SET Appointment_Status = 'Cancelled' WHERE Appointment_ID = ?");
+            $stmt->execute([$appointment_id]);
+
+            // If there's a reason, you could log it in a separate table if needed
+            // For now, we're just updating the status
+            
+            $con->commit();
+            return true;
+        } catch (PDOException $e) {
+            if ($con->inTransaction()) {
+                $con->rollBack();
+            }
+            throw new Exception("Failed to cancel appointment: " . $e->getMessage());
+        }
     }
 }

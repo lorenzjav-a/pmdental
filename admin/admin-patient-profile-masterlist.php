@@ -88,12 +88,13 @@ if (isset($_POST['save_med_history'])) {
                   <th>Gender</th>
                   <th>Date of Birth</th>
                   <th>Contact Line</th>
+                  <th>Email</th>
                   <th class="text-end">Clinical Intake</th>
                 </tr>
               </thead>
               <tbody>
                 <?php if (empty($allPatients) || !is_array($allPatients)): ?>
-                  <tr><td colspan="6" class="text-center text-muted py-4">No patient records available.</td></tr>
+                  <tr><td colspan="7" class="text-center text-muted py-4">No patient records available.</td></tr>
                 <?php else: ?>
                   <?php foreach ($allPatients as $pat): ?>
                     <?php $pName = htmlspecialchars(($pat['Patient_FN'] ?? '') . ' ' . ($pat['Patient_LN'] ?? '')); ?>
@@ -103,6 +104,7 @@ if (isset($_POST['save_med_history'])) {
                       <td><span class="text-capitalize"><?= htmlspecialchars($pat['Patient_Gender'] ?? 'unspecified'); ?></span></td>
                       <td><?= !empty($pat['Patient_BirthDate']) ? date('M d, Y', strtotime($pat['Patient_BirthDate'])) : 'Not Typed'; ?></td>
                       <td><?= htmlspecialchars($pat['Patient_PhoneNo'] ?? ''); ?></td>
+                      <td><?= htmlspecialchars($pat['Patient_Email'] ?? ''); ?></td>
                       <td class="text-end">
                         <button type="button" class="btn btn-sm btn-outline-info px-2 me-1 view-pres-btn" data-patient-id="<?= $pat['Patient_ID']; ?>" data-patient-name="<?= $pName; ?>">View Prescription</button>
                         <button type="button" class="btn btn-sm btn-outline-danger px-2" data-bs-toggle="modal" data-bs-target="#historyModal" data-patient-id="<?= $pat['Patient_ID']; ?>" data-patient-name="<?= $pName; ?>">+ Add Med History</button>
@@ -243,7 +245,7 @@ if (isset($_POST['save_med_history'])) {
         if (!noResultsRow) {
           noResultsRow = document.createElement('tr');
           noResultsRow.id = noResultsRowId;
-          noResultsRow.innerHTML = '<td colspan="6" class="text-center text-muted py-4">No matching records found.</td>';
+          noResultsRow.innerHTML = '<td colspan="7" class="text-center text-muted py-4">No matching records found.</td>';
           table.querySelector('tbody').appendChild(noResultsRow);
         }
       });

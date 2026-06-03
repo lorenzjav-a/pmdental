@@ -95,6 +95,26 @@ if (isset($_POST['submit_prescription_form'])) {
     }
 }
 
+// Cancel appointment
+if (isset($_POST['cancel_appointment_btn'])) {
+    try {
+        $appointment_id = (int)$_POST['appointment_id_to_cancel'];
+        $cancellation_reason = trim($_POST['cancellation_reason'] ?? '');
+
+        if (empty($appointment_id)) {
+            throw new Exception("Invalid appointment ID.");
+        }
+
+        $db->cancelAppointment($appointment_id, $cancellation_reason);
+
+        $msg = 'Appointment cancelled successfully!';
+        $msgType = 'success';
+    } catch (Exception $e) {
+        $msg = $e->getMessage();
+        $msgType = 'danger';
+    }
+}
+
 // DATA
 $admin_name = $_SESSION['admin_name'] ?? 'Admin';
 $account_type = $_SESSION['account_type'] ?? 0;

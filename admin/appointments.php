@@ -10,6 +10,28 @@ if (!isset($_SESSION['admin_id'])) {
 
 $admin_name = $_SESSION['admin_name'] ?? 'Administrator';
 $activePage = 'appointments';
+$msg = $msgType = '';
+
+// Cancel appointment
+if (isset($_POST['cancel_appointment_btn'])) {
+    try {
+        $appointment_id = (int)$_POST['appointment_id_to_cancel'];
+        $cancellation_reason = trim($_POST['cancellation_reason'] ?? '');
+
+        if (empty($appointment_id)) {
+            throw new Exception("Invalid appointment ID.");
+        }
+
+        $db->cancelAppointment($appointment_id, $cancellation_reason);
+
+        $msg = 'Appointment cancelled successfully!';
+        $msgType = 'success';
+    } catch (Exception $e) {
+        $msg = $e->getMessage();
+        $msgType = 'danger';
+    }
+}
+
 $appointments = $db->viewAppointments();
 ?>
 <!DOCTYPE html>
@@ -123,6 +145,12 @@ $appointments = $db->viewAppointments();
             </div>
             <a href="login.php" class="logout-btn"><i class="fas fa-sign-out-alt"></i>Logout</a>
         </div>
+        <?php if ($msg): ?>
+            <div class="alert alert-<?= htmlspecialchars($msgType); ?> alert-dismissible fade show mt-3" role="alert">
+                <?= htmlspecialchars($msg); ?>
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+            </div>
+        <?php endif; ?>
         <div class="table-section">
             <h4 class="mb-4">Appointment Registry</h4>
             <div class="table-responsive">
@@ -134,12 +162,13 @@ $appointments = $db->viewAppointments();
                             <th>Dentist</th>
                             <th>Date</th>
                             <th>Status</th>
+                            <th>Actions</th>
                         </tr>
                     </thead>
                     <tbody>
                         <?php if (empty($appointments)): ?>
                             <tr>
-                                <td colspan="5" class="text-center text-muted py-4">No appointments found.</td>
+                                <td colspan="6" class="text-center text-muted py-4">No appointments found.</td>
                             </tr>
                         <?php else: ?>
                             <?php foreach ($appointments as $app): ?>
@@ -162,6 +191,17 @@ $appointments = $db->viewAppointments();
                                     <td><?= htmlspecialchars($dentistName); ?></td>
                                     <td><?= !empty($app['Appointment_Date']) ? date('M d, Y - h:i A', strtotime($app['Appointment_Date'])) : '-'; ?></td>
                                     <td><span class="badge <?= $badge; ?>"><?= htmlspecialchars($status); ?></span></td>
+                                    <td>
+                                        <?php if ($status === 'Cancelled' || $status === 'Completed'): ?>
+                                            <button class="btn btn-sm btn-danger disabled" disabled>
+                                                <i class="fas fa-times"></i> Cancel
+                                            </button>
+                                        <?php else: ?>
+                                            <button class="btn btn-sm btn-danger" data-bs-toggle="modal" data-bs-target="#cancelModal" onclick="setCancelAppointment(<?= htmlspecialchars($app['Appointment_ID']); ?>, '<?= htmlspecialchars($patientName); ?>')">
+                                                <i class="fas fa-times"></i> Cancel
+                                            </button>
+                                        <?php endif; ?>
+                                    </td>
                                 </tr>
                             <?php endforeach; ?>
                         <?php endif; ?>
@@ -170,6 +210,35 @@ $appointments = $db->viewAppointments();
             </div>
         </div>
     </div>
-</body>
 
-</html>
+    <!-- Cancel Appointment Modal -->
+    <div class="modal fade" id="cancelModal" tabindex="-1" aria-labelledby="cancelModalLabel" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header bg-danger text-white">
+                    <h5 class="modal-title" id="cancelModalLabel">Cancel Appointment</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <form action="admin-dashboard.php" method="POST">
+                    <div class="modal-body">
+                        <p><strong>Patient:</strong> <span id="cancelPatientName"></span></p>
+                        <label for="cancellationReason" class="form-label">Cancellation Reason (Optional)</label>
+                        <textarea class="form-control" id="cancellationReason" name="cancellation_reason" rows="4" placeholder="Enter reason for cancellation..."></textarea>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                        <button type="submit" name="cancel_appointment_btn" class="btn btn-danger">Confirm Cancellation</button>
+                    </div>
+                    <input type="hidden" name="appointment_id_to_cancel" id="appointmentIdToCancel">
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        function setCancelAppointment(appointmentId, patientName) {
+            document.getElementById('appointmentIdToCancel').value = appointmentId;
+            document.getElementById('cancelPatientName').textContent = patientName;
+        }
+    </script>
