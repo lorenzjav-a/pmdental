@@ -10,7 +10,7 @@ if (!isset($_SESSION['admin_id'])) {
 $db = new database();
 $msg = $msgType = '';
 
-// AJAX patient details
+
 if (isset($_GET['fetch_patient_details']) && isset($_GET['patient_id'])) {
     header('Content-Type: application/json');
 
@@ -360,7 +360,7 @@ $pendingRequests = $db->countAppointments('Pending');
         <div class="row g-4">
 
 
-            <!-- LEFT COLUMN -->
+            
             <div class="col-lg-5">
                 <div class="table-section h-100">
                     <div class="d-flex justify-content-between align-items-start mb-3">
@@ -446,7 +446,7 @@ $pendingRequests = $db->countAppointments('Pending');
             </div>
 
 
-            <!-- RIGHT COLUMN -->
+            
             <div class="col-lg-7">
                 <div class="table-section h-100">
                     <div class="mb-3">
@@ -560,7 +560,7 @@ $pendingRequests = $db->countAppointments('Pending');
     </div>
 
 
-    <!-- Add Service Modal -->
+    // service modal
     <div class="modal fade" id="addServiceModal" tabindex="-1" aria-hidden="true">
         <div class="modal-dialog modal-dialog-centered modal-sm">
             <form action="" method="POST" class="modal-content">
@@ -586,7 +586,7 @@ $pendingRequests = $db->countAppointments('Pending');
         </div>
     </div>
 
-    <!-- Patient Intake Modal -->
+    // patient intake Modal
     <div class="modal fade" id="patientIntakeModal" tabindex="-1" aria-hidden="true">
         <div class="modal-dialog modal-dialog-centered modal-lg">
             <div class="modal-content border-0 shadow">
@@ -645,7 +645,7 @@ $pendingRequests = $db->countAppointments('Pending');
         </div>
     </div>
 
-    <!-- PRESCRIPTION WRITING MODAL -->
+    // prescription writing modal
     <div class="modal fade" id="prescriptionWritingModal" tabindex="-1" aria-hidden="true">
         <div class="modal-dialog modal-lg modal-dialog-centered">
             <form action="" method="POST" class="modal-content border-0 shadow">
@@ -707,7 +707,7 @@ $pendingRequests = $db->countAppointments('Pending');
             document.addEventListener('click', function(e) {
 
 
-                // ================= VIEW CHART =================
+                //view chart
                 const viewBtn = e.target.closest('.view-intake-btn');
                 if (viewBtn) {
                     const patId = viewBtn.getAttribute('data-patient-id');
@@ -776,7 +776,7 @@ $pendingRequests = $db->countAppointments('Pending');
                 }
 
 
-                // ================= EDIT FEE =================
+                //edit fee
                 const editBtn = e.target.closest('.update-fee-trigger');
                 if (editBtn) {
                     document.getElementById('target_service_id').value = editBtn.dataset.id;
@@ -788,7 +788,7 @@ $pendingRequests = $db->countAppointments('Pending');
                 }
 
 
-                // ================= RX =================
+                //rx btn
                 const rxBtn = e.target.closest('.write-rx-btn');
                 if (rxBtn) {
                     document.getElementById('rx_appointment_id').value = rxBtn.dataset.apptId;
@@ -802,7 +802,7 @@ $pendingRequests = $db->countAppointments('Pending');
             });
 
 
-            // ================= ADD RX ROW =================
+            //add rx
             const addRxBtn = document.getElementById('addRxItemRow');
             if (addRxBtn) {
                 addRxBtn.addEventListener('click', function() {
@@ -830,7 +830,7 @@ $pendingRequests = $db->countAppointments('Pending');
             }
 
 
-            // ================= REMOVE RX ROW =================
+            //remove rx
             const rxItemsContainer = document.getElementById('rx_items_container');
             if (rxItemsContainer) {
                 rxItemsContainer.addEventListener('click', function(e) {
@@ -845,7 +845,7 @@ $pendingRequests = $db->countAppointments('Pending');
                 });
             }
 
-            // ================= SEARCH APPOINTMENTS =================
+            //search bars
             function installTableSearch(inputId, tableId) {
               const input = document.getElementById(inputId);
               const table = document.getElementById(tableId);

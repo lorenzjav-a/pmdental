@@ -12,19 +12,19 @@ if (isset($_POST['update_appointment_end_time'])) {
     $appointment_id = (int)$_POST['appointment_id'];
     $end_date = trim($_POST['end_date'] ?? '');
     $end_time = trim($_POST['end_time'] ?? '');
-    
+
     // Validate that both date and time are provided
     if (empty($end_date) || empty($end_time)) {
         header('Location: calendar.php?error=' . urlencode('Date and time are required'));
         exit();
     }
+
     
-    // Debug: log the received values
     error_log("DEBUG: end_date='$end_date', end_time='$end_time'");
-    
+
     $end_datetime = date('Y-m-d H:i:s', strtotime($end_date . ' ' . $end_time));
     error_log("DEBUG: Constructed end_datetime='$end_datetime'");
-    
+
     try {
         $db->updateAppointmentEndTime($appointment_id, $end_datetime);
         header('Location: calendar.php?success=1');
@@ -41,7 +41,7 @@ if (isset($_GET['fetch_dentist_calendar'], $_GET['dentist_id'])) {
     $appointments = $db->getDentistAppointments($dentist_id);
     $calendar_events = $db->getDentistCalendarByDentist($dentist_id);
     $events = [];
-    
+
     // Add appointments
     foreach ($appointments as $appt) {
         $events[] = [
@@ -61,7 +61,7 @@ if (isset($_GET['fetch_dentist_calendar'], $_GET['dentist_id'])) {
             ]
         ];
     }
-    
+
     // Add calendar schedule slots
     foreach ($calendar_events as $cal) {
         $start_datetime = $cal['Schedule_Date'] . ' ' . $cal['Start_Time'];
@@ -447,7 +447,7 @@ $activePage = 'calendar';
 
 <body>
     <?php include 'admin-sidebar.php'; ?>
-    
+
     <nav class="navbar navbar-expand-lg bg-white border-bottom sticky-top">
         <div class="container-fluid px-4">
             <a class="navbar-brand fw-semibold" href="admin-dashboard.php">PM Dental Admin</a>
@@ -586,25 +586,25 @@ $activePage = 'calendar';
                         document.getElementById('modal_appointment_id').value = info.event.extendedProps.appointmentId;
                         document.getElementById('modal_patient_name').innerText = info.event.extendedProps.patient;
                         document.getElementById('modal_service_name').innerText = info.event.extendedProps.service || 'Not Specified';
-                        
+
                         // Use the actual appointment date from the database
                         const appointmentDateStr = info.event.extendedProps.appointmentDate;
                         console.log("Raw appointmentDate:", appointmentDateStr);
-                        
+
                         // Parse the date string directly (format: "2026-06-03 12:30:00")
                         const parts = appointmentDateStr.split(' ');
                         const dateOnly = parts[0]; // "2026-06-03"
                         const timeOnly = parts[1] ? parts[1].substring(0, 5) : '00:00'; // "12:30"
-                        
+
                         console.log("Parsed - dateOnly:", dateOnly, "timeOnly:", timeOnly);
-                        
+
                         // Pre-fill with appointment's actual scheduled date and time
                         document.getElementById('modal_end_date').value = dateOnly;
                         document.getElementById('modal_end_time').value = timeOnly;
-                        
+
                         console.log("Modal set - end_date value:", document.getElementById('modal_end_date').value);
                         console.log("Modal set - end_time value:", document.getElementById('modal_end_time').value);
-                        
+
                         var endModal = new bootstrap.Modal(document.getElementById('appointmentEndModal'));
                         endModal.show();
                     }

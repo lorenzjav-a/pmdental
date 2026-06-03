@@ -62,7 +62,6 @@
 
 <script>
     function openImageInNewTab(imagePath) {
-        // Convert relative path to absolute path for the new tab
         const baseUrl = window.location.origin + window.location.pathname.replace('pages/index.php', '');
         const fullImagePath = baseUrl + imagePath.replace('../', '');
         window.open(fullImagePath, '_blank');

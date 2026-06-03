@@ -16,10 +16,10 @@ $loginMessage = "";
 if (isset($_POST['btnLogin'])) {
 
     $email = trim($_POST['email'] ?? "");
-    // FIX: Changed 'passwords' to 'password' to exactly match the HTML input attribute name below
+    
     $passwords = trim($_POST['password'] ?? "");
 
-    // VALIDATION
+    
     if ($email == "") {
         $emailErr = "Required!";
     }
@@ -39,13 +39,13 @@ if (isset($_POST['btnLogin'])) {
                 $_SESSION['account_type'] = $user['account_type'];
                 $_SESSION['admin_id'] = $user['id'];
                 
-                // Fetch the correct name based on account type
+                
                 $admin_name = 'User';
                 if ($user['account_type'] == 1) {
-                    // Employee
+                    
                     $admin_name = $user['name'] ?? 'Staff Member';
                 } elseif ($user['account_type'] == 2) {
-                    // Dentist - fetch dentist name
+                    
                     $dentistInfo = $con->getDentistById($user['id']);
                     if ($dentistInfo) {
                         $admin_name = trim(($dentistInfo['Dentist_FN'] ?? '') . ' ' . ($dentistInfo['Dentist_LN'] ?? '')) ?: 'Attending Dentist';
@@ -144,7 +144,7 @@ if (isset($_POST['btnLogin'])) {
             });
 
             setTimeout(() => {
-                // FIX: Dynamically forwards workspace routes depending on whether they are Employee (1) or Dentist (2)
+                // forwards workspace routes depending on whether they are Employee (1) or Dentist (2)
                 if (accountType == 1) {
                     window.location.href = 'employee-dashboard.php';
                 } else if (accountType == 2) {
@@ -161,6 +161,7 @@ if (isset($_POST['btnLogin'])) {
             });
         }
     </script>
+
 </body>
 
 </html>

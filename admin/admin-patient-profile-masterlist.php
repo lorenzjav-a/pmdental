@@ -4,8 +4,8 @@ require_once('../class/database.php');
 $con = new database();
 
 if (!isset($_SESSION['admin_id'])) {
-    header('Location: login.php');
-    exit();
+  header('Location: login.php');
+  exit();
 }
 
 $activePage = 'patient_masterlist';
@@ -14,30 +14,31 @@ $alertStatus = null;
 $alertMessage = '';
 
 if (isset($_GET['fetch_prescription_json'], $_GET['patient_id'])) {
-    header('Content-Type: application/json');
-    $data = $con->getPrescriptionItemsByPatient((int)$_GET['patient_id']);
-    echo json_encode($data ? $data : []);
-    exit();
+  header('Content-Type: application/json');
+  $data = $con->getPrescriptionItemsByPatient((int)$_GET['patient_id']);
+  echo json_encode($data ? $data : []);
+  exit();
 }
 
 if (isset($_POST['save_med_history'])) {
-    $patient_id = (int)$_POST['history_patient_id'];
-    $condition = trim($_POST['med_condition']);
-    $notes = trim($_POST['med_notes'] ?? '');
+  $patient_id = (int)$_POST['history_patient_id'];
+  $condition = trim($_POST['med_condition']);
+  $notes = trim($_POST['med_notes'] ?? '');
 
-    try {
-        $con->addMedicalHistory($patient_id, $condition, $notes);
-        $alertStatus = 'success';
-        $alertMessage = 'Medical history parameters successfully logged to patient profile.';
-        $allPatients = $con->viewPatients();
-    } catch (Exception $e) {
-        $alertStatus = 'error';
-        $alertMessage = $e->getMessage();
-    }
+  try {
+    $con->addMedicalHistory($patient_id, $condition, $notes);
+    $alertStatus = 'success';
+    $alertMessage = 'Medical history parameters successfully logged to patient profile.';
+    $allPatients = $con->viewPatients();
+  } catch (Exception $e) {
+    $alertStatus = 'error';
+    $alertMessage = $e->getMessage();
+  }
 }
 ?>
 <!doctype html>
 <html lang="en">
+
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
@@ -46,23 +47,99 @@ if (isset($_POST['save_med_history'])) {
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" />
   <link rel="stylesheet" href="../sweetalert/dist/sweetalert2.css" />
   <style>
-    * { margin: 0; padding: 0; box-sizing: border-box; }
-    body { font-family: Arial, sans-serif; background: #f4f7fb; }
-    #adminSidebar { position: fixed; top: 0; left: 0; width: 240px; height: 100vh; background: #0d1b2a; color: #fff; z-index: 1050; overflow-y: auto; padding-top: 1.5rem; }
-    #adminSidebar .sidebar-brand { font-size: 1.25rem; font-weight: 700; padding: 0 1.5rem; margin-bottom: 1.5rem; display: block; color: #fff; }
-    #adminSidebar .sidebar-links { padding: 0 1.2rem; }
-    #adminSidebar .sidebar-links a { display: block; color: #d6d6d6; padding: 0.9rem 0.75rem; text-decoration: none; border-radius: 0.65rem; margin-bottom: 0.35rem; transition: background 0.2s, color 0.2s; }
-    #adminSidebar .sidebar-links a.active, #adminSidebar .sidebar-links a:hover { background: #1b263b; color: #fff; }
-    .main { margin-left: 260px; padding: 25px; }
-    .topbar { background: white; border-radius: 12px; padding: 18px 25px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05); margin-bottom: 25px; }
-    .logout-btn { background: #dc3545; color: white; text-decoration: none; padding: 10px 15px; border-radius: 8px; transition: 0.3s; }
-    .logout-btn:hover { background: #bb2d3b; }
-    .card { border: none; border-radius: 15px; box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05); }
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: Arial, sans-serif;
+      background: #f4f7fb;
+    }
+
+    #adminSidebar {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 240px;
+      height: 100vh;
+      background: #0d1b2a;
+      color: #fff;
+      z-index: 1050;
+      overflow-y: auto;
+      padding-top: 1.5rem;
+    }
+
+    #adminSidebar .sidebar-brand {
+      font-size: 1.25rem;
+      font-weight: 700;
+      padding: 0 1.5rem;
+      margin-bottom: 1.5rem;
+      display: block;
+      color: #fff;
+    }
+
+    #adminSidebar .sidebar-links {
+      padding: 0 1.2rem;
+    }
+
+    #adminSidebar .sidebar-links a {
+      display: block;
+      color: #d6d6d6;
+      padding: 0.9rem 0.75rem;
+      text-decoration: none;
+      border-radius: 0.65rem;
+      margin-bottom: 0.35rem;
+      transition: background 0.2s, color 0.2s;
+    }
+
+    #adminSidebar .sidebar-links a.active,
+    #adminSidebar .sidebar-links a:hover {
+      background: #1b263b;
+      color: #fff;
+    }
+
+    .main {
+      margin-left: 260px;
+      padding: 25px;
+    }
+
+    .topbar {
+      background: white;
+      border-radius: 12px;
+      padding: 18px 25px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+      margin-bottom: 25px;
+    }
+
+    .logout-btn {
+      background: #dc3545;
+      color: white;
+      text-decoration: none;
+      padding: 10px 15px;
+      border-radius: 8px;
+      transition: 0.3s;
+    }
+
+    .logout-btn:hover {
+      background: #bb2d3b;
+    }
+
+    .card {
+      border: none;
+      border-radius: 15px;
+      box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+    }
   </style>
 </head>
+
 <body>
   <?php include 'admin-sidebar.php'; ?>
-  
+
   <div class="main">
     <div class="topbar">
       <div>
@@ -94,7 +171,9 @@ if (isset($_POST['save_med_history'])) {
               </thead>
               <tbody>
                 <?php if (empty($allPatients) || !is_array($allPatients)): ?>
-                  <tr><td colspan="7" class="text-center text-muted py-4">No patient records available.</td></tr>
+                  <tr>
+                    <td colspan="7" class="text-center text-muted py-4">No patient records available.</td>
+                  </tr>
                 <?php else: ?>
                   <?php foreach ($allPatients as $pat): ?>
                     <?php $pName = htmlspecialchars(($pat['Patient_FN'] ?? '') . ' ' . ($pat['Patient_LN'] ?? '')); ?>
@@ -255,8 +334,17 @@ if (isset($_POST['save_med_history'])) {
 
     const alertMsgStatus = <?php echo json_encode($alertStatus); ?>;
     const alertMsgText = <?php echo json_encode($alertMessage); ?>;
-    if (alertMsgStatus === 'success') Swal.fire({ icon: 'success', title: 'Saved', text: alertMsgText });
-    else if (alertMsgStatus === 'error') Swal.fire({ icon: 'error', title: 'Action Failed', text: alertMsgText });
+    if (alertMsgStatus === 'success') Swal.fire({
+      icon: 'success',
+      title: 'Saved',
+      text: alertMsgText
+    });
+    else if (alertMsgStatus === 'error') Swal.fire({
+      icon: 'error',
+      title: 'Action Failed',
+      text: alertMsgText
+    });
   </script>
 </body>
+
 </html>

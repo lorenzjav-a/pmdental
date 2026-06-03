@@ -211,7 +211,7 @@ $appointments = $db->viewAppointments();
         </div>
     </div>
 
-    <!-- Cancel Appointment Modal -->
+    //cancel appointment modal
     <div class="modal fade" id="cancelModal" tabindex="-1" aria-labelledby="cancelModalLabel" aria-hidden="true">
         <div class="modal-dialog">
             <div class="modal-content">
@@ -236,6 +236,8 @@ $appointments = $db->viewAppointments();
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+
+
     <script>
         function setCancelAppointment(appointmentId, patientName) {
             document.getElementById('appointmentIdToCancel').value = appointmentId;

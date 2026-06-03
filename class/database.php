@@ -208,7 +208,7 @@ class database
     {
         $con = $this->opencon();
         try {
-            $stmt = $con->prepare('SELECT Den_Calendar_ID, Dentist_ID, Schedule_Date, Start_Time, End_Time FROM dentist_calendar');
+            $stmt = $con->prepare('SELECT Den_Calendar_ID, Dentist_ID, Schedule_Date, Start_Time, End_Time FROM dentist_calendar ORDER BY Schedule_Date ASC');
             $stmt->execute();
             return $stmt->fetchAll(PDO::FETCH_ASSOC);
         } catch (PDOException $e) {
@@ -382,7 +382,35 @@ class database
         try {
             $stmt = $con->prepare("SELECT Den_Calendar_ID, Dentist_ID, Schedule_Date, Start_Time, End_Time FROM dentist_calendar WHERE Dentist_ID = ? ORDER BY Schedule_Date ASC");
             $stmt->execute([$dentist_id]);
-            return $stmt->fetchAll(PDO::FETCH_ASSOC);
+            $calendar_slots = $stmt->fetchAll(PDO::FETCH_ASSOC);
+            
+            // Enhance calendar slots with appointment information (including patient email) if available
+            foreach ($calendar_slots as &$slot) {
+                $slot_start = $slot['Schedule_Date'] . ' ' . $slot['Start_Time'];
+                $slot_end = $slot['Schedule_Date'] . ' ' . $slot['End_Time'];
+                
+                // Check for appointments that fall within this time slot
+                $stmt_appt = $con->prepare("SELECT a.Appointment_ID, p.Patient_ID, p.Patient_FN, p.Patient_LN, p.Patient_PhoneNo, p.Patient_Email, s.Service_Name 
+                    FROM appointment a 
+                    LEFT JOIN patient p ON a.Patient_ID = p.Patient_ID 
+                    LEFT JOIN appointment_service asv ON a.Appointment_ID = asv.Appointment_ID 
+                    LEFT JOIN service s ON asv.Service_ID = s.Service_ID 
+                    WHERE a.Dentist_ID = ? AND a.Appointment_Date >= ? AND a.Appointment_Date < ? AND a.Appointment_Status IN ('Pending', 'Confirmed')");
+                $stmt_appt->execute([$dentist_id, $slot_start, $slot_end]);
+                $appointment = $stmt_appt->fetch(PDO::FETCH_ASSOC);
+                
+                if ($appointment) {
+                    $slot['Appointment_ID'] = $appointment['Appointment_ID'];
+                    $slot['Patient_ID'] = $appointment['Patient_ID'];
+                    $slot['Patient_FN'] = $appointment['Patient_FN'];
+                    $slot['Patient_LN'] = $appointment['Patient_LN'];
+                    $slot['Patient_PhoneNo'] = $appointment['Patient_PhoneNo'];
+                    $slot['Patient_Email'] = $appointment['Patient_Email'];
+                    $slot['Service_Name'] = $appointment['Service_Name'];
+                }
+            }
+            
+            return $calendar_slots;
         } catch (PDOException $e) {
             return [];
         }
